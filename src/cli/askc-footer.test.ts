@@ -10,7 +10,7 @@ function runFooter() {
 
 type Opts = {
   sendBatch?: boolean;
-  rill?: boolean;
+  keel?: boolean;
   react?: boolean;
   reconciler?: boolean;
   guest?: unknown;
@@ -34,10 +34,10 @@ function createSpy(): Spy {
 function setupGlobals(opts: Opts = {}): Spy {
   const render = createSpy();
   if (opts.sendBatch !== false) {
-    (globalThis as unknown as { __rill_sendBatch: unknown }).__rill_sendBatch = () => {};
+    (globalThis as unknown as { __keel_sendBatch: unknown }).__keel_sendBatch = () => {};
   }
-  if (opts.rill !== false) {
-    (globalThis as unknown as { __rill: unknown }).__rill = {
+  if (opts.keel !== false) {
+    (globalThis as unknown as { __keel: unknown }).__keel = {
       guest: opts.guest ?? { default: () => null },
     };
   }
@@ -47,16 +47,16 @@ function setupGlobals(opts: Opts = {}): Spy {
     };
   }
   if (opts.reconciler !== false) {
-    (globalThis as unknown as { RillReconciler: unknown }).RillReconciler = { render: render.fn };
+    (globalThis as unknown as { KeelReconciler: unknown }).KeelReconciler = { render: render.fn };
   }
   return render;
 }
 
 function clearGlobals() {
   const g = globalThis as unknown as Record<string, unknown>;
-  delete g['__rill_sendBatch'];
-  delete g['__rill'];
-  delete g['RillReconciler'];
+  delete g['__keel_sendBatch'];
+  delete g['__keel'];
+  delete g['KeelReconciler'];
   delete g['React'];
 }
 
@@ -69,14 +69,14 @@ describe('askc-footer auto-render', () => {
     expect(render.calls).toHaveLength(1);
   });
 
-  it('缺 __rill_sendBatch 不渲染', () => {
+  it('缺 __keel_sendBatch 不渲染', () => {
     const render = setupGlobals({ sendBatch: false });
     runFooter();
     expect(render.calls).toHaveLength(0);
   });
 
-  it('缺 __rill.guest 不渲染', () => {
-    const render = setupGlobals({ rill: false });
+  it('缺 __keel.guest 不渲染', () => {
+    const render = setupGlobals({ keel: false });
     runFooter();
     expect(render.calls).toHaveLength(0);
   });
@@ -87,7 +87,7 @@ describe('askc-footer auto-render', () => {
     expect(render.calls).toHaveLength(0);
   });
 
-  it('缺 RillReconciler 不渲染', () => {
+  it('缺 KeelReconciler 不渲染', () => {
     const render = setupGlobals({ reconciler: false });
     runFooter();
     expect(render.calls).toHaveLength(0);
@@ -107,15 +107,15 @@ describe('askc-footer auto-render', () => {
     expect(render.calls).toHaveLength(0);
   });
 
-  it('render 入参用 __rill_sendBatch', () => {
+  it('render 入参用 __keel_sendBatch', () => {
     const sendBatch = () => {};
-    (globalThis as unknown as { __rill_sendBatch: unknown }).__rill_sendBatch = sendBatch;
-    (globalThis as unknown as { __rill: unknown }).__rill = { guest: { default: () => null } };
+    (globalThis as unknown as { __keel_sendBatch: unknown }).__keel_sendBatch = sendBatch;
+    (globalThis as unknown as { __keel: unknown }).__keel = { guest: { default: () => null } };
     (globalThis as unknown as { React: unknown }).React = {
       createElement: () => ({ type: 'el' }),
     };
     const render = createSpy();
-    (globalThis as unknown as { RillReconciler: unknown }).RillReconciler = { render: render.fn };
+    (globalThis as unknown as { KeelReconciler: unknown }).KeelReconciler = { render: render.fn };
     runFooter();
     expect(render.calls[0]?.[1]).toBe(sendBatch);
   });

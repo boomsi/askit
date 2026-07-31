@@ -1,8 +1,8 @@
 /**
  * Guest Component Factory
  *
- * Creates type-safe Guest component identifiers for the rill reconciler.
- * In rill's model, Guest components are plain string identifiers that
+ * Creates type-safe Guest component identifiers for the keel reconciler.
+ * In keel's model, Guest components are plain string identifiers that
  * the reconciler serializes and sends to the Host for rendering.
  */
 

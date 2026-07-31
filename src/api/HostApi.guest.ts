@@ -1,6 +1,6 @@
 import type { GuestToHostEventPayloads, HostToGuestEventPayloads } from 'askit/contracts';
 import { useCallback, useEffect, useRef } from 'react';
-import { useHostEvent, useSendToHost } from 'rill/guest';
+import { useHostEvent, useSendToHost } from 'keel/guest';
 
 type RequestPayloadWithId = {
   requestId: string;

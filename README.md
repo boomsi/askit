@@ -4,14 +4,14 @@
 
 [中文文档](./README.zh.md)
 
-**askit** is a UI component library and API layer built on top of [rill](https://github.com/GoAskAway/rill). Through package.json conditional exports, the same `import { StepList, Toast } from 'askit'` delivers real React Native components on the Host side and string identifiers on the Guest side (which rill passes to Host for rendering).
+**askit** is a UI component library and API layer built on top of [keel](https://github.com/GoAskAway/keel). Through package.json conditional exports, the same `import { StepList, Toast } from 'askit'` delivers real React Native components on the Host side and string identifiers on the Guest side (which keel passes to Host for rendering).
 
-## Relationship with rill
+## Relationship with keel
 
 | Layer | Role |
 |-------|------|
-| **rill** | Sandbox-isolated dynamic UI rendering engine — runs React code in isolated JS sandbox (QuickJS/JSC), serializes render operations into instructions, sends them to Host for real React Native rendering |
-| **askit** | UI components and API layer on top of rill — provides business components (StepList, ChatBubble, etc.) and cross-boundary APIs (EventEmitter, Toast, Haptic) |
+| **keel** | Sandbox-isolated dynamic UI rendering engine — runs React code in isolated JS sandbox (QuickJS/JSC), serializes render operations into instructions, sends them to Host for real React Native rendering |
+| **askit** | UI components and API layer on top of keel — provides business components (StepList, ChatBubble, etc.) and cross-boundary APIs (EventEmitter, Toast, Haptic) |
 
 **How it works:**
 - **UI Components**: Guest side is string `"StepList"`, Host side is complete RN implementation
@@ -36,7 +36,7 @@ askit follows a **90% Universal + 10% Core** architecture:
 │           └──────────┬───────────────┘                      │
 │                      ▼                                      │
 │              ┌───────────────┐                              │
-│              │  rill Engine  │                              │
+│              │  keel Engine  │                              │
 │              └───────┬───────┘                              │
 └──────────────────────┼──────────────────────────────────────┘
                        │ Message Protocol
@@ -94,7 +94,7 @@ export function App() {
 ```typescript
 // Import core module for bridging
 import { createEngineAdapter, components } from 'askit/core';
-import { Engine } from 'rill';
+import { Engine } from 'keel';
 
 // Create engine and connect askit
 const engine = new Engine();
@@ -109,22 +109,22 @@ await engine.loadBundle('https://example.com/guest.js');
 
 ## What is askit?
 
-`askit` is the **UI kit + host/guest integration layer** designed to run on top of `rill`.
+`askit` is the **UI kit + host/guest integration layer** designed to run on top of `keel`.
 
 - In **Guest** (sandbox): `askit` provides **element identifiers** (string `ElementType`) and lightweight APIs.
   You write standard React JSX (`<UserAvatar />`, `<StepList />`).
 - In **Host** (React Native): `askit` provides the **real native implementations** of those components,
-  plus a small adapter (`createEngineAdapter`) that wires rill's `Engine` event channel to askit modules/events.
+  plus a small adapter (`createEngineAdapter`) that wires keel's `Engine` event channel to askit modules/events.
 
 ### Responsibilities & boundaries
 
 | Layer | Owns | Typical code | Notes |
 |---|---|---|---|
 | App (your product) | Business logic, screens, state, data fetching | `unified-app.js` / app TSX | Emits/receives domain events |
-| `askit` | Component library + a few cross-boundary APIs (Toast/Haptic/EventEmitter) | `askit/src/ui`, `askit/src/api` | Uses rill HostEvent model |
-| `rill` | Sandbox runtime, reconciler, ops/receiver, devtools | `Engine`, `Receiver`, providers | Framework/runtime; no app UI |
+| `askit` | Component library + a few cross-boundary APIs (Toast/Haptic/EventEmitter) | `askit/src/ui`, `askit/src/api` | Uses keel HostEvent model |
+| `keel` | Sandbox runtime, reconciler, ops/receiver, devtools | `Engine`, `Receiver`, providers | Framework/runtime; no app UI |
 
-### Message model (aligned with rill)
+### Message model (aligned with keel)
 
 - **Guest → Host**: `global.__sendEventToHost(eventName, payload)`
   - `ASKIT_*` are reserved internal command events used by askit modules:
@@ -184,7 +184,7 @@ Haptic.trigger(type?: 'light' | 'medium' | 'heavy' | 'selection' | 'success' | '
 | `UserAvatar` | User avatar with fallback support |
 | `ChatBubble` | Chat message bubble |
 | `PanelMarker` | Panel marker for left/right panel identification (Host-only) |
-| `EngineMonitorOverlay` | Debug overlay for rill engine monitoring (Host-only) |
+| `EngineMonitorOverlay` | Debug overlay for keel engine monitoring (Host-only) |
 
 ### Host-only Utilities
 

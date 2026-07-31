@@ -2,7 +2,7 @@
  * AskIt Registry - Component and Module Registration
  *
  * This module provides the registry that connects askit components
- * to the Rill engine. Host apps import this to inject native implementations.
+ * to the Keel engine. Host apps import this to inject native implementations.
  */
 
 import { ChatBubble } from '../ui/ChatBubble/ChatBubble.host';
@@ -20,11 +20,11 @@ import {
 } from './registry.modules';
 
 /**
- * Component registry for Rill engine
+ * Component registry for Keel engine
  *
  * Usage:
  * ```typescript
- * import { Engine } from 'rill';
+ * import { Engine } from 'keel';
  * import { components } from 'askit/core';
  *
  * const engine = new Engine();

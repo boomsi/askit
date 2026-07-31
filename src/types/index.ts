@@ -12,7 +12,7 @@ import type { GestureResponderEvent } from 'react-native';
 export type Environment = 'host' | 'guest';
 
 // ============================================================================
-// Style Types (Aligned with rill StyleObject/StyleProp)
+// Style Types (Aligned with keel StyleObject/StyleProp)
 // ============================================================================
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
@@ -28,7 +28,7 @@ export type FlexJustify =
 /**
  * Shared style type across the Host/Guest boundary.
  *
- * Intentionally aligned with `rill`'s `StyleObject` so that values can be passed
+ * Intentionally aligned with `keel`'s `StyleObject` so that values can be passed
  * across the engine boundary without type friction.
  */
 export interface StyleObject {
@@ -143,7 +143,7 @@ export interface StyleObject {
 }
 
 /**
- * Style prop type (aligned with rill)
+ * Style prop type (aligned with keel)
  */
 export type StyleProp = StyleObject | StyleObject[] | undefined;
 
@@ -264,7 +264,7 @@ export interface GlobalAlertProps extends BaseProps {
 }
 
 // ============================================================================
-// Protocol Types (aligned to rill HostEvent model)
+// Protocol Types (aligned to keel HostEvent model)
 // ============================================================================
 
 /** Reserved event names used by askit for module commands */
@@ -297,7 +297,7 @@ export interface EventListenerOptions {
 
 /**
  * Typed event map for askit EventEmitter
- * Similar to Rill's EngineEvents, provides type safety for event payload
+ * Similar to Keel's EngineEvents, provides type safety for event payload
  *
  * Users can extend this interface to add custom typed events:
  *

@@ -14,15 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Checkout rill
-        uses: actions/checkout@v4
-        with:
-          repository: Actrium/rill
-          path: rill
-
-      - name: Move rill out of workspace
-        run: mv rill ../rill
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
@@ -30,8 +21,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # askit 无 workspaces 配置，peerDep 的 rill: workspace:* 在 CI 解析失败，临时改为 *
-          sed -i 's/"rill": "workspace:\*"/"rill": "*"/' package.json
+          # keel 是私有上游仓库，CI 默认 GITHUB_TOKEN 无权访问；askit 的 typecheck
+          # 靠 keel-guest.d.ts stub 兜底、test 不 import keel，故移除 keel devDep 让 install 通过
+          sed -i '/"keel":/d' package.json
           bun install
 
       - name: Run type check

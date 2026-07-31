@@ -4,7 +4,7 @@ askit provides a set of UI components that work across Host and Guest environmen
 
 ## How Components Work
 
-askit follows the same model as `rill/let`: **Guest components are plain element identifiers** (string ElementType).
+askit follows the same model as `keel/let`: **Guest components are plain element identifiers** (string ElementType).
 The reconciler serializes props and produces operations.
 
 In **Guest** (QuickJS): write JSX.
@@ -200,7 +200,7 @@ export function App() {
 
 ## Custom Components
 
-You can create custom components in the same way as rill/let: define an element type identifier for Guest, and register a host implementation.
+You can create custom components in the same way as keel/let: define an element type identifier for Guest, and register a host implementation.
 
 ### In Guest (element identifier)
 

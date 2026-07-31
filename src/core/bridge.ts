@@ -144,11 +144,11 @@ export type EngineInterface = {
 };
 
 /**
- * Create engine adapter for Rill integration
+ * Create engine adapter for Keel integration
  *
  * Usage:
  * ```typescript
- * import { Engine } from 'rill';
+ * import { Engine } from 'keel';
  * import { createEngineAdapter, components } from 'askit/core';
  *
  * const engine = new Engine();
@@ -167,7 +167,7 @@ export function createEngineAdapter(
 ): { dispose: () => void } {
   const emitter = EventEmitter as HostEventEmitterInternal;
 
-  // Forward Host EventEmitter events to Guest via rill Engine.sendEvent
+  // Forward Host EventEmitter events to Guest via keel Engine.sendEvent
   emitter._setBroadcaster((event: string, payload: unknown) => {
     engine.sendEvent(event, payload);
   });

@@ -1,8 +1,8 @@
 /**
- * askit <-> host protocol (aligned to rill HostEvent model)
+ * askit <-> host protocol (aligned to keel HostEvent model)
  *
- * Guest -> Host messages are delivered via rill's `__sendEventToHost(eventName, payload)`.
- * Host -> Guest uses rill's `Engine.sendEvent(eventName, payload)`.
+ * Guest -> Host messages are delivered via keel's `__sendEventToHost(eventName, payload)`.
+ * Host -> Guest uses keel's `Engine.sendEvent(eventName, payload)`.
  *
  * We reserve `ASKIT_*` event names for askit internal/module commands.
  */

@@ -2,7 +2,7 @@
  * EventEmitter - Guest Implementation
  *
  * In guest/sandbox environment, EventEmitter communicates with Host through the bridge.
- * Uses global.__sendEventToHost and global.__useHostEvent provided by Rill runtime.
+ * Uses global.__sendEventToHost and global.__useHostEvent provided by Keel runtime.
  *
  * Features:
  * - Automatic retry on network failures
@@ -21,7 +21,7 @@ interface QueuedMessage {
   timestamp: number;
 }
 
-// Declare globals injected by Rill runtime
+// Declare globals injected by Keel runtime
 declare const global: {
   __sendEventToHost?: (eventName: string, payload?: unknown) => void;
   __useHostEvent?: (eventName: string, callback: (payload: unknown) => void) => () => void;
@@ -31,7 +31,7 @@ class GuestEventEmitter extends EventEmitterBase implements EventEmitterAPI {
   private messageQueue: QueuedMessage[] = [];
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Host event subscription tracking (for rill's per-event subscription model)
+  // Host event subscription tracking (for keel's per-event subscription model)
   private hostEventUnsubscribers: (() => void)[] = [];
   private subscribedHostEvents = new Set<string>();
 

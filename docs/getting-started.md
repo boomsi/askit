@@ -2,13 +2,13 @@
 
 This guide will help you get started with askit in your project.
 
-**askit** is a UI component library and API layer built on top of [rill](https://github.com/GoAskAway/rill). Through package.json conditional exports, the same `import { StepList, Toast } from 'askit'` delivers real React Native components on the Host side and string identifiers on the Guest side (which rill passes to Host for rendering).
+**askit** is a UI component library and API layer built on top of [keel](https://github.com/GoAskAway/keel). Through package.json conditional exports, the same `import { StepList, Toast } from 'askit'` delivers real React Native components on the Host side and string identifiers on the Guest side (which keel passes to Host for rendering).
 
 ## Prerequisites
 
 - Node.js 18+
 - React 19+ / React Native 0.82+ (for Host App)
-- rill engine (for Guest sandbox)
+- keel engine (for Guest sandbox)
 
 ## Installation
 
@@ -42,7 +42,7 @@ In your React Native host app:
 
 ```typescript
 import { createEngineAdapter, components } from 'askit/core';
-import { Engine } from 'rill';
+import { Engine } from 'keel';
 
 // Create and configure engine
 const engine = new Engine();

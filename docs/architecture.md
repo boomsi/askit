@@ -2,14 +2,14 @@
 
 ## Overview
 
-**askit** is a UI component library and API layer built on top of [rill](https://github.com/GoAskAway/rill). Through package.json conditional exports, the same `import { StepList, Toast } from 'askit'` delivers real React Native components on the Host side and string identifiers on the Guest side (which rill passes to Host for rendering).
+**askit** is a UI component library and API layer built on top of [keel](https://github.com/GoAskAway/keel). Through package.json conditional exports, the same `import { StepList, Toast } from 'askit'` delivers real React Native components on the Host side and string identifiers on the Guest side (which keel passes to Host for rendering).
 
-### Relationship with rill
+### Relationship with keel
 
 | Layer | Role |
 |-------|------|
-| **rill** | Sandbox-isolated dynamic UI rendering engine — runs React code in isolated JS sandbox (QuickJS/JSC), serializes render operations into instructions, sends them to Host for real React Native rendering |
-| **askit** | UI components and API layer on top of rill — provides business components (StepList, ChatBubble, etc.) and cross-boundary APIs (EventEmitter, Toast, Haptic) |
+| **keel** | Sandbox-isolated dynamic UI rendering engine — runs React code in isolated JS sandbox (QuickJS/JSC), serializes render operations into instructions, sends them to Host for real React Native rendering |
+| **askit** | UI components and API layer on top of keel — provides business components (StepList, ChatBubble, etc.) and cross-boundary APIs (EventEmitter, Toast, Haptic) |
 
 ### Core Mechanism
 
@@ -62,7 +62,7 @@ The `package.json` uses conditional exports to serve different TypeScript source
 │                        HOST APP                                   │
 │                                                                   │
 │  ┌────────────────┐    ┌──────────────────┐    ┌──────────────┐ │
-│  │ EventEmitter   │    │  createEngine    │    │    Rill      │ │
+│  │ EventEmitter   │    │  createEngine    │    │    Keel      │ │
 │  │ (host)         │◄───│  Adapter         │◄───│   Engine     │ │
 │  │ - emit()       │    │  - _setBroadcast │    │              │ │
 │  │ - on()/off()   │    │  - _notifyListen │    │              │ │
@@ -76,7 +76,7 @@ The `package.json` uses conditional exports to serve different TypeScript source
 │  └────────────────┘                                    │         │
 └────────────────────────────────────────────────────────┼─────────┘
                                                          │
-                            Message Protocol (rill HostEvent model)
+                            Message Protocol (keel HostEvent model)
 
 - Guest 0 Host: `event: string`, `payload: unknown`
   - `ASKIT_*` are **reserved internal commands** used by askit modules.
@@ -166,7 +166,7 @@ function handleGuestMessage(message: GuestMessage) {
 
 ### Engine Adapter (`core/bridge.ts`)
 
-Connects Rill Engine with askit EventEmitter:
+Connects Keel Engine with askit EventEmitter:
 
 ```typescript
 import { BROADCASTER_SYMBOL } from '../api/EventEmitter.host';

@@ -7,7 +7,7 @@
 import { logger } from '../core/logger';
 import type { ToastAPI, ToastOptions } from '../types';
 
-// Declare globals injected by Rill runtime
+// Declare globals injected by Keel runtime
 declare const global: {
   __sendEventToHost?: (eventName: string, payload?: unknown) => void;
 };

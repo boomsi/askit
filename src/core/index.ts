@@ -2,11 +2,11 @@
  * AskIt Core - Host Only Module
  *
  * This module is only available in Host App environment.
- * It provides the registry and bridge for connecting askit to Rill engine.
+ * It provides the registry and bridge for connecting askit to Keel engine.
  *
  * Usage:
  * ```typescript
- * import { Engine } from 'rill';
+ * import { Engine } from 'keel';
  * import { components, createEngineAdapter } from 'askit/core';
  *
  * const engine = new Engine();

@@ -223,11 +223,11 @@ Haptic.trigger('error');
 
 ### createEngineAdapter(engine)
 
-为 rill 引擎创建桥接适配器。
+为 keel 引擎创建桥接适配器。
 
 ```typescript
 import { createEngineAdapter } from 'askit/core';
-import { Engine } from 'rill';
+import { Engine } from 'keel';
 
 const engine = new Engine();
 const adapter = createEngineAdapter(engine);
