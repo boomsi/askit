@@ -4,7 +4,7 @@ askit 提供一组可在 Host 和 Guest 环境中使用的 UI 组件。
 
 ## 组件工作原理
 
-askit 采用与 `rill/let` 一致的模型：**Guest 侧组件是 element 标识（string ElementType）**，由 reconciler 负责序列化 props 并生成操作。
+askit 采用与 `keel/let` 一致的模型：**Guest 侧组件是 element 标识（string ElementType）**，由 reconciler 负责序列化 props 并生成操作。
 
 在 **Guest** (QuickJS) 中：直接写 JSX。
 
@@ -194,7 +194,7 @@ export function App() {
 
 ## 自定义组件
 
-你可以按照 rill/let 的方式创建自定义组件：在 Guest 侧定义 element 标识，在 Host 侧注册实际实现。
+你可以按照 keel/let 的方式创建自定义组件：在 Guest 侧定义 element 标识，在 Host 侧注册实际实现。
 
 ### 在 Guest 中（element 标识）
 

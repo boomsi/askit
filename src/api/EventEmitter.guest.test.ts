@@ -19,7 +19,7 @@ describe('EventEmitter (Guest)', () => {
   let originalSendToHost: unknown;
   let originalUseHostEvent: unknown;
 
-  // Map of event name -> Set of callbacks (simulating rill's per-event subscription)
+  // Map of event name -> Set of callbacks (simulating keel's per-event subscription)
   let hostEventCallbacks: Map<string, Set<(payload: unknown) => void>>;
 
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe('EventEmitter (Guest)', () => {
       sentMessages.push({ event: eventName, payload });
     };
 
-    // Setup __useHostEvent to simulate rill's per-event subscription model
+    // Setup __useHostEvent to simulate keel's per-event subscription model
     sandboxGlobal.__useHostEvent = (eventName: string, callback: (payload: unknown) => void) => {
       if (!hostEventCallbacks.has(eventName)) {
         hostEventCallbacks.set(eventName, new Set());

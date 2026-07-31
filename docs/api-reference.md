@@ -223,11 +223,11 @@ The `askit/core` module is only available in the Host App.
 
 ### createEngineAdapter(engine)
 
-Create a bridge adapter for the rill engine.
+Create a bridge adapter for the keel engine.
 
 ```typescript
 import { createEngineAdapter } from 'askit/core';
-import { Engine } from 'rill';
+import { Engine } from 'keel';
 
 const engine = new Engine();
 const adapter = createEngineAdapter(engine);

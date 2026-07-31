@@ -2,11 +2,11 @@
  * askc Auto-render Footer
  * Used by askc apps that export usePanels hook
  *
- * Usage: rill build src/app.tsx -o bundle.js --footer node_modules/askit/src/cli/askc-footer.js
+ * Usage: keel build src/app.tsx -o bundle.js --footer node_modules/askit/src/cli/askc-footer.js
  */
 /* Auto-render (askc mode) */
 (function () {
-  if (typeof __rill_sendBatch === 'function' && globalThis.__rill && globalThis.__rill.guest) {
+  if (typeof __keel_sendBatch === 'function' && globalThis.__keel && globalThis.__keel.guest) {
     try {
       var React = globalThis.React;
       if (!React) {
@@ -14,13 +14,13 @@
         return;
       }
 
-      var RillReconciler = globalThis.RillReconciler;
-      if (!RillReconciler || !RillReconciler.render) {
-        console.error('[askc] RillReconciler not found, cannot auto-render');
+      var KeelReconciler = globalThis.KeelReconciler;
+      if (!KeelReconciler || !KeelReconciler.render) {
+        console.error('[askc] KeelReconciler not found, cannot auto-render');
         return;
       }
 
-      var GuestExport = globalThis.__rill.guest;
+      var GuestExport = globalThis.__keel.guest;
       var element;
 
       // Check for usePanels hook export (askc panel mode)
@@ -51,7 +51,7 @@
       }
 
       console.log('[askc] Auto-rendering guest');
-      RillReconciler.render(element, __rill_sendBatch);
+      KeelReconciler.render(element, __keel_sendBatch);
     } catch (error) {
       console.error('[askc] Auto-render failed:', error);
     }

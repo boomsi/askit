@@ -4,14 +4,14 @@
 
 [English](./README.md)
 
-**askit** 是构建在 [rill](https://github.com/GoAskAway/rill) 之上的 UI 组件库与 API 层。通过 package.json 条件导出，同一份 `import { StepList, Toast } from 'askit'` 在 Host 端获得真实 React Native 组件，在 Guest 端获得字符串标识符（由 rill 传递给 Host 渲染）。
+**askit** 是构建在 [keel](https://github.com/GoAskAway/keel) 之上的 UI 组件库与 API 层。通过 package.json 条件导出，同一份 `import { StepList, Toast } from 'askit'` 在 Host 端获得真实 React Native 组件，在 Guest 端获得字符串标识符（由 keel 传递给 Host 渲染）。
 
-## 与 rill 的关系
+## 与 keel 的关系
 
 | 层级 | 职责 |
 |------|------|
-| **rill** | 沙箱隔离的动态 UI 渲染引擎 — 在独立的 JS 沙箱（QuickJS/JSC）中运行 React 代码，将渲染操作序列化为指令发送给 Host，由 Host 端的真实 React Native 执行渲染 |
-| **askit** | 构建在 rill 之上的 UI 组件与 API 层 — 提供业务组件（StepList、ChatBubble 等）和跨边界 API（EventEmitter、Toast、Haptic） |
+| **keel** | 沙箱隔离的动态 UI 渲染引擎 — 在独立的 JS 沙箱（QuickJS/JSC）中运行 React 代码，将渲染操作序列化为指令发送给 Host，由 Host 端的真实 React Native 执行渲染 |
+| **askit** | 构建在 keel 之上的 UI 组件与 API 层 — 提供业务组件（StepList、ChatBubble 等）和跨边界 API（EventEmitter、Toast、Haptic） |
 
 **核心机制：**
 - **UI 组件**：Guest 端是字符串 `"StepList"`，Host 端是完整的 RN 实现
@@ -36,7 +36,7 @@ askit 采用 **90% 通用 + 10% 核心** 架构：
 │           └──────────┬───────────────┘                      │
 │                      ▼                                      │
 │              ┌───────────────┐                              │
-│              │  rill Engine  │                              │
+│              │  keel Engine  │                              │
 │              └───────┬───────┘                              │
 └──────────────────────┼──────────────────────────────────────┘
                        │ 消息协议
@@ -94,7 +94,7 @@ export function App() {
 ```typescript
 // 导入核心模块用于桥接
 import { createEngineAdapter, components } from 'askit/core';
-import { Engine } from 'rill';
+import { Engine } from 'keel';
 
 // 创建引擎并连接 askit
 const engine = new Engine();
@@ -109,20 +109,20 @@ await engine.loadBundle('https://example.com/guest.js');
 
 ## askit 是什么？
 
-`askit` 是构建在 `rill` 之上的 **UI 组件库 + Host/Guest 接入层**。
+`askit` 是构建在 `keel` 之上的 **UI 组件库 + Host/Guest 接入层**。
 
 - **Guest（沙箱）侧**：提供组件的 element 标识（string `ElementType`）与少量 API。你直接写标准 React JSX（例如 `<UserAvatar />`、`<StepList />`）。
-- **Host（React Native）侧**：提供同名组件的真实 RN 实现，以及适配器 `createEngineAdapter`，用于把 rill `Engine` 的事件通道与 askit 的模块/事件打通。
+- **Host（React Native）侧**：提供同名组件的真实 RN 实现，以及适配器 `createEngineAdapter`，用于把 keel `Engine` 的事件通道与 askit 的模块/事件打通。
 
 ### 分工与边界
 
 | 层级 | 负责什么 | 典型代码 | 说明 |
 |---|---|---|---|
 | 业务应用（你的产品） | 业务逻辑、页面、状态、数据请求 | `unified-app.js` / app TSX | 发送/接收业务事件 |
-| `askit` | 组件库 + 少量跨边界 API（Toast/Haptic/EventEmitter） | `askit/src/ui`, `askit/src/api` | 使用 rill HostEvent 模型 |
-| `rill` | 沙箱运行时、reconciler、ops/receiver、devtools | `Engine`, `Receiver`, providers | 框架/运行时，不关心业务 UI |
+| `askit` | 组件库 + 少量跨边界 API（Toast/Haptic/EventEmitter） | `askit/src/ui`, `askit/src/api` | 使用 keel HostEvent 模型 |
+| `keel` | 沙箱运行时、reconciler、ops/receiver、devtools | `Engine`, `Receiver`, providers | 框架/运行时，不关心业务 UI |
 
-### 消息模型（对齐 rill）
+### 消息模型（对齐 keel）
 
 - **Guest → Host**：`global.__sendEventToHost(eventName, payload)`
   - `ASKIT_*` 为 askit 模块使用的保留内部命令事件：
@@ -182,7 +182,7 @@ Haptic.trigger(type?: 'light' | 'medium' | 'heavy' | 'selection' | 'success' | '
 | `UserAvatar` | 带降级支持的用户头像 |
 | `ChatBubble` | 聊天消息气泡 |
 | `PanelMarker` | 面板标记，用于识别左/右面板 (仅 Host) |
-| `EngineMonitorOverlay` | rill 引擎监控调试覆盖层 (仅 Host) |
+| `EngineMonitorOverlay` | keel 引擎监控调试覆盖层 (仅 Host) |
 
 ### 仅 Host 端工具
 

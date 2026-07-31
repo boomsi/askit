@@ -42,7 +42,7 @@ type Manifest = {
     rightPanelDefaultVisible?: boolean;
 
     /**
-     * Internal build artifact name used by askc/rill host.
+     * Internal build artifact name used by askc/keel host.
      * Defaults to 'unified-app.js' when omitted.
      */
     unified?: string;
@@ -204,7 +204,7 @@ askc-cli（最小闭环）
   - 默认入口：src/unified-app.tsx
   - 默认输出：dist/unified-app.js + <name>.askc
   - build 会写入 manifest.contract / manifest.integrity（sha256）
-  - Guest bundle 运行在 Rill QuickJS 沙箱，外部依赖建议 external：react/react-native/react/jsx-runtime/rill/*
+  - Guest bundle 运行在 Keel QuickJS 沙箱，外部依赖建议 external：react/react-native/react/jsx-runtime/keel/*
 `);
 }
 
@@ -272,18 +272,18 @@ async function cmdInit(args: string[], flags: Map<string, string | boolean>): Pr
 function buildAutoRenderFooter(): string {
   return `
 ;(function(){
-  if(typeof __sendToHost!=="function"||typeof __RillGuest==="undefined") return;
+  if(typeof __sendToHost!=="function"||typeof __KeelGuest==="undefined") return;
   try{
     var React=globalThis.React;
-    if(!React){console.error("[rill] React not found, cannot auto-render");return;}
-    var RillLet=globalThis.RillLet;
-    if(!RillLet||!RillLet.render){console.error("[rill] RillLet not found, cannot auto-render");return;}
-    var Comp=typeof __RillGuest==="function"?__RillGuest:(__RillGuest.default||__RillGuest);
-    if(!Comp||typeof Comp!=="function"){console.warn("[rill] No valid component found in guest");return;}
+    if(!React){console.error("[keel] React not found, cannot auto-render");return;}
+    var KeelLet=globalThis.KeelLet;
+    if(!KeelLet||!KeelLet.render){console.error("[keel] KeelLet not found, cannot auto-render");return;}
+    var Comp=typeof __KeelGuest==="function"?__KeelGuest:(__KeelGuest.default||__KeelGuest);
+    if(!Comp||typeof Comp!=="function"){console.warn("[keel] No valid component found in guest");return;}
     var el=React.createElement(Comp);
-    console.log("[rill] Auto-rendering guest component");
-    RillLet.render(el,__sendToHost);
-  }catch(e){console.error("[rill] Auto-render failed:",e);}
+    console.log("[keel] Auto-rendering guest component");
+    KeelLet.render(el,__sendToHost);
+  }catch(e){console.error("[keel] Auto-render failed:",e);}
 })();`;
 }
 
@@ -296,7 +296,7 @@ const EXTERNALS_MAP: Record<string, string> = {
   'react/jsx-runtime': 'ReactJSXRuntime',
   'react/jsx-dev-runtime': 'ReactJSXDevRuntime',
   'react-native': 'ReactNative',
-  '@rill/let': 'RillLet',
+  '@keel/let': 'KeelLet',
 };
 
 async function cmdBuild(args: string[], flags: Map<string, string | boolean>): Promise<void> {
@@ -309,7 +309,7 @@ async function cmdBuild(args: string[], flags: Map<string, string | boolean>): P
   if (!manifest.contract) manifest.contract = DEFAULT_CONTRACT;
   const unifiedName = manifest.layout?.unified ?? 'unified-app.js';
 
-  // 1. 触发项目内部构建（例如执行 rill cli 生成 app.js）
+  // 1. 触发项目内部构建（例如执行 keel cli 生成 app.js）
   await run(['npm', 'run', 'build'], { cwd: project });
 
   const distDir = joinPath(project, 'dist');

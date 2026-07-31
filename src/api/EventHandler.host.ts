@@ -3,7 +3,7 @@ import { HostHttpHandler } from './Https.host';
 
 /**
  * 本地 Engine 最小契约（structural）
- * 只声明 EventHandler 实际依赖的方法，避免直接 import rill/host 触发对 rill 源码的类型扫描。
+ * 只声明 EventHandler 实际依赖的方法，避免直接 import keel/host 触发对 keel 源码的类型扫描。
  */
 type Engine = {
   on(

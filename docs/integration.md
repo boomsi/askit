@@ -1,15 +1,15 @@
-# askit & rill Integration Guide
+# askit & keel Integration Guide
 
-This guide explains how askit integrates with rill to enable sandboxed Guest execution with a unified API surface.
+This guide explains how askit integrates with keel to enable sandboxed Guest execution with a unified API surface.
 
 ## Overview
 
-**askit** is a UI component library and API layer built on top of [rill](https://github.com/GoAskAway/rill):
+**askit** is a UI component library and API layer built on top of [keel](https://github.com/GoAskAway/keel):
 
 | Layer | Role |
 |-------|------|
-| **rill** | Sandbox-isolated dynamic UI rendering engine — runs React code in isolated JS sandbox (QuickJS/JSC), serializes render operations into instructions, sends them to Host for real React Native rendering |
-| **askit** | UI components and API layer on top of rill — provides business components (StepList, ChatBubble, etc.) and cross-boundary APIs (EventEmitter, Toast, Haptic) |
+| **keel** | Sandbox-isolated dynamic UI rendering engine — runs React code in isolated JS sandbox (QuickJS/JSC), serializes render operations into instructions, sends them to Host for real React Native rendering |
+| **askit** | UI components and API layer on top of keel — provides business components (StepList, ChatBubble, etc.) and cross-boundary APIs (EventEmitter, Toast, Haptic) |
 
 askit provides:
 - Unified APIs that work identically in both Host and Guest
@@ -21,7 +21,7 @@ askit provides:
 │                     Your Host App                        │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │                                                  │   │
-│  │    import { Engine } from 'rill'                │   │
+│  │    import { Engine } from 'keel'                │   │
 │  │    import { createEngineAdapter,                │   │
 │  │             components } from 'askit/core'      │   │
 │  │                                                  │   │
@@ -45,7 +45,7 @@ askit provides:
             │ engine.on('message') / engine.sendEvent()
             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    rill Engine                           │
+│                    keel Engine                           │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │  QuickJS Sandbox Runtime                         │  │
 │  │                                                   │  │
@@ -75,10 +75,10 @@ askit provides:
 
 ```typescript
 // Host App initialization
-import { Engine } from 'rill';
+import { Engine } from 'keel';
 import { createEngineAdapter, components } from 'askit/core';
 
-// Step 1: Create rill engine
+// Step 1: Create keel engine
 const engine = new Engine();
 
 // Step 2: Create askit bridge adapter
@@ -137,7 +137,7 @@ When Guest calls askit APIs, messages are routed through multiple layers:
                 Message: { event, payload }
                              │
 ┌────────────────────────────┼────────────────────────────────────┐
-│ RILL ENGINE                ▼                                     │
+│ KEEL ENGINE                ▼                                     │
 │                                                                  │
 │  engine.emit('message', { event, payload })                     │
 └────────────────────────────┼────────────────────────────────────┘
@@ -191,7 +191,7 @@ Host can send events to Guest through the EventEmitter:
                              │
                              │
 ┌────────────────────────────┼────────────────────────────────────┐
-│ RILL ENGINE                ▼                                     │
+│ KEEL ENGINE                ▼                                     │
 │                                                                  │
 │  Calls global.onHostEvent('config:update', { theme: 'dark' })   │
 └────────────────────────────┼────────────────────────────────────┘
@@ -210,7 +210,7 @@ Host can send events to Guest through the EventEmitter:
 
 ### 4. UI Component Rendering
 
-askit components return DSL objects in Guest, which rill renders natively in Host:
+askit components return DSL objects in Guest, which keel renders natively in Host:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -235,7 +235,7 @@ export function App() {
                    DSL: { type: 'StepList', props }
                              │
 ┌────────────────────────────┼────────────────────────────────────┐
-│ RILL ENGINE                ▼                                     │
+│ KEEL ENGINE                ▼                                     │
 │                                                                  │
 │  Receives DSL object from Guest                                 │
 │  Looks up 'StepList' in registered components                   │
@@ -261,7 +261,7 @@ export function App() {
 // App.tsx
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Engine, EngineView } from 'rill';
+import { Engine, EngineView } from 'keel';
 import { createEngineAdapter, components } from 'askit/core';
 import { EventEmitter } from 'askit';
 
@@ -345,7 +345,7 @@ export default function GuestUI(props) {
       │
       ▼
 ┌──────────────┐
-│ RILL ENGINE  │
+│ KEEL ENGINE  │
 └─────┬────────┘
       │
       │ 5. Download & execute Guest
@@ -388,7 +388,7 @@ All Guest→Host communication uses the format:
 ```
 
 ### 3. Bridge Adapter
-The bridge adapter connects askit to rill's message system:
+The bridge adapter connects askit to keel's message system:
 - Listens to `engine.on('message')` for Guest→Host
 - Uses `EventEmitter[BROADCASTER_SYMBOL]()` for Host→Guest (Symbol-based internal API)
 - Routes messages to appropriate handlers
@@ -433,7 +433,7 @@ console.log('Can send to host:', typeof global.sendToHost === 'function');
 1. **Always create the bridge adapter** before loading Guest code
 2. **Register components** before calling `engine.loadBundle()`
 3. **Use EventEmitter for bidirectional events**, not direct message passing
-4. **Keep Guest bundles small** - askit is already included via `rill/sdk`
+4. **Keep Guest bundles small** - askit is already included via `keel/sdk`
 5. **Handle errors gracefully** - Guest crashes shouldn't crash Host
 
 ## Troubleshooting

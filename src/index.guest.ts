@@ -1,7 +1,7 @@
 /**
  * askit - Guest Entry
  *
- * This is the main entry point for QuickJS / Rill sandbox environment.
+ * This is the main entry point for QuickJS / Keel sandbox environment.
  * Exports DSL identifiers that map to host components.
  */
 

@@ -11,7 +11,7 @@ import { EventEmitterBase } from './EventEmitterBase';
 
 /**
  * Event broadcast callback type
- * Used by createEngineAdapter to forward events to Rill Engine
+ * Used by createEngineAdapter to forward events to Keel Engine
  */
 export type EventBroadcaster = (event: string, payload: unknown) => void;
 

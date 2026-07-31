@@ -14,14 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Checkout rill
+      - name: Checkout keel
         uses: actions/checkout@v4
         with:
-          repository: Actrium/rill
-          path: rill
+          repository: Actrium/keel
+          path: keel
 
-      - name: Move rill out of workspace
-        run: mv rill ../rill
+      - name: Move keel out of workspace
+        run: mv keel ../keel
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -29,10 +29,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: |
-          # askit 无 workspaces 配置，peerDep 的 rill: workspace:* 在 CI 解析失败，临时改为 *
-          sed -i 's/"rill": "workspace:\*"/"rill": "*"/' package.json
-          bun install
+        run: bun install
 
       - name: Run type check
         run: bun run typecheck

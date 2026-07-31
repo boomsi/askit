@@ -35,9 +35,9 @@ importers:
       react-native:
         specifier: 0.79.6
         version: 0.79.6(@babel/core@7.28.5)(@types/react@19.0.0)(react@19.0.0)
-      rill:
-        specifier: file:../rill
-        version: file:../rill(react-native@0.79.6(@babel/core@7.28.5)(@types/react@19.0.0)(react@19.0.0))(react@19.0.0)
+      keel:
+        specifier: file:../keel
+        version: file:../keel(react-native@0.79.6(@babel/core@7.28.5)(@types/react@19.0.0)(react@19.0.0))(react@19.0.0)
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
@@ -1430,8 +1430,8 @@ packages:
     resolution: {integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==}
     engines: {node: '>=8'}
 
-  rill@file:../rill:
-    resolution: {directory: ../rill, type: directory}
+  keel@file:../keel:
+    resolution: {directory: ../keel, type: directory}
     engines: {bun: '>=1.0.0', node: '>=18.0.0'}
     peerDependencies:
       react: '>=18.0.0'
@@ -3324,7 +3324,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  rill@file:../rill(react-native@0.79.6(@babel/core@7.28.5)(@types/react@19.0.0)(react@19.0.0))(react@19.0.0):
+  keel@file:../keel(react-native@0.79.6(@babel/core@7.28.5)(@types/react@19.0.0)(react@19.0.0))(react@19.0.0):
     dependencies:
       react: 19.0.0
     optionalDependencies:
