@@ -14,22 +14,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Checkout keel
-        uses: actions/checkout@v4
-        with:
-          repository: Actrium/keel
-          path: keel
-
-      - name: Move keel out of workspace
-        run: mv keel ../keel
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install
+        run: |
+          # keel 是私有上游仓库，CI 默认 GITHUB_TOKEN 无权访问；askit 的 typecheck
+          # 靠 keel-guest.d.ts stub 兜底、test 不 import keel，故移除 keel devDep 让 install 通过
+          sed -i '/"keel":/d' package.json
+          bun install
 
       - name: Run type check
         run: bun run typecheck
