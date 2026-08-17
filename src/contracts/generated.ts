@@ -23,10 +23,11 @@ export type HostToGuestEventPayloads = {
   "SEND_APP_INFO": { "appName": string; "author": string; "favoriteCount": number; "languageContents": unknown; "logo": string; "requestId": string; "usedCount": number; };
   "SEND_EMAIL_RESULT": { "error"?: unknown; "requestId": string; "success": boolean; };
   "SET_APP_LANGUAGE_RESULT": { "error"?: unknown; "requestId": string; "success": boolean; };
+  "SET_TOOLBOX_ENTRIES_RESULT": { "error"?: unknown; "requestId": string; "success": boolean; };
   "SPEECH_RESPONSE": { "error"?: unknown; "requestId": string; "success": boolean; };
 };
 export type HostToGuestEventName = keyof HostToGuestEventPayloads;
-export const HOST_TO_GUEST_EVENT_NAMES = ["// --- 标准原生能力 ---", "// --- 系统内置 ---", "CLEAR_CHAT_HISTORY_RESULT", "CLOSE_EXTENSION_RESULT", "HOST_VISIBILITY", "HTTP_RESPONSE", "LANGUAGE_LIST", "RECEIVER_BACKPRESSURE", "SEND_APP_INFO", "SEND_EMAIL_RESULT", "SET_APP_LANGUAGE_RESULT", "SPEECH_RESPONSE"] as const;
+export const HOST_TO_GUEST_EVENT_NAMES = ["// --- 标准原生能力 ---", "// --- 系统内置 ---", "CLEAR_CHAT_HISTORY_RESULT", "CLOSE_EXTENSION_RESULT", "HOST_VISIBILITY", "HTTP_RESPONSE", "LANGUAGE_LIST", "RECEIVER_BACKPRESSURE", "SEND_APP_INFO", "SEND_EMAIL_RESULT", "SET_APP_LANGUAGE_RESULT", "SET_TOOLBOX_ENTRIES_RESULT", "SPEECH_RESPONSE"] as const;
 export function isHostToGuestEventName(name: string): name is HostToGuestEventName {
   return ((HOST_TO_GUEST_EVENT_NAMES as readonly string[]).includes(name));
 }
@@ -44,10 +45,11 @@ export type GuestToHostEventPayloads = {
   "HTTP_REQUEST": { "body"?: unknown; "headers"?: unknown; "method"?: string; "requestId": string; "url": string; };
   "SEND_EMAIL": { "requestId": string; "subject": string; "to": string; };
   "SET_APP_LANGUAGE": { "language": string; "requestId": string; };
+  "SET_TOOLBOX_ENTRIES": { "entries": { "camera"?: boolean; "file"?: boolean; "location"?: boolean; "photo"?: boolean; "sendKey"?: boolean; "webSearch"?: boolean; }; "requestId": string; };
   "SPEECH_REQUEST": { "action": unknown; "requestId": string; "text"?: string; };
 };
 export type GuestToHostEventName = keyof GuestToHostEventPayloads;
-export const GUEST_TO_HOST_EVENT_NAMES = ["// --- 标准原生能力 ---", "// --- 系统内置 ---", "ASKIT_HAPTIC_TRIGGER", "ASKIT_TOAST_SHOW", "CLEAR_CHAT_HISTORY", "CLOSE_EXTENSION", "GET_APP_INFO", "GET_LANGUAGE_LIST", "GUEST_SLEEP_STATE", "HTTP_REQUEST", "SEND_EMAIL", "SET_APP_LANGUAGE", "SPEECH_REQUEST"] as const;
+export const GUEST_TO_HOST_EVENT_NAMES = ["// --- 标准原生能力 ---", "// --- 系统内置 ---", "ASKIT_HAPTIC_TRIGGER", "ASKIT_TOAST_SHOW", "CLEAR_CHAT_HISTORY", "CLOSE_EXTENSION", "GET_APP_INFO", "GET_LANGUAGE_LIST", "GUEST_SLEEP_STATE", "HTTP_REQUEST", "SEND_EMAIL", "SET_APP_LANGUAGE", "SET_TOOLBOX_ENTRIES", "SPEECH_REQUEST"] as const;
 export function isGuestToHostEventName(name: string): name is GuestToHostEventName {
   return ((GUEST_TO_HOST_EVENT_NAMES as readonly string[]).includes(name));
 }
@@ -66,14 +68,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function validatePayloadAgainstSchema(payload: unknown, schema: Record<string, any>): boolean {
+interface PayloadSchema {
+  [key: string]: readonly [type: string | PayloadSchema, optional: boolean];
+}
+
+function validatePayloadAgainstSchema(payload: unknown, schema: PayloadSchema): boolean {
   if (!isPlainObject(payload)) return false;
   const obj = payload as Record<string, unknown>;
   for (const key of Object.keys(schema)) {
     const field = schema[key];
-    if (!field || !Array.isArray(field)) continue;
+    if (!field) continue;
 
-    const [typeOrSchema, optional] = field as [any, boolean];
+    const [typeOrSchema, optional] = field;
 
     if (!(key in obj)) {
       if (!optional) return false;
@@ -92,9 +98,8 @@ function validatePayloadAgainstSchema(payload: unknown, schema: Record<string, a
       continue;
     }
 
-    const typeStr = typeOrSchema as string;
-    const isNullable = typeStr.includes('| null');
-    const baseType = typeStr.replace('| null', '').trim();
+    const isNullable = typeOrSchema.includes('| null');
+    const baseType = typeOrSchema.replace('| null', '').trim();
 
     if (value === null) {
       if (!isNullable) return false;
@@ -119,13 +124,14 @@ export const HOST_TO_GUEST_PAYLOAD_SCHEMA = {
   "SEND_APP_INFO": { "appName": ["string", false] as const, "author": ["string", false] as const, "favoriteCount": ["number", false] as const, "languageContents": ["unknown", false] as const, "logo": ["string", false] as const, "requestId": ["string", false] as const, "usedCount": ["number", false] as const },
   "SEND_EMAIL_RESULT": { "error": ["unknown", true] as const, "requestId": ["string", false] as const, "success": ["boolean", false] as const },
   "SET_APP_LANGUAGE_RESULT": { "error": ["unknown", true] as const, "requestId": ["string", false] as const, "success": ["boolean", false] as const },
+  "SET_TOOLBOX_ENTRIES_RESULT": { "error": ["unknown", true] as const, "requestId": ["string", false] as const, "success": ["boolean", false] as const },
   "SPEECH_RESPONSE": { "error": ["unknown", true] as const, "requestId": ["string", false] as const, "success": ["boolean", false] as const },
 } as const;
 export function validateHostToGuestPayload<E extends HostToGuestEventName>(
   name: E,
   payload: unknown
 ): payload is HostToGuestEventPayloads[E] {
-  const schema = (HOST_TO_GUEST_PAYLOAD_SCHEMA as Record<string, Record<string, any>>)[name];
+  const schema = (HOST_TO_GUEST_PAYLOAD_SCHEMA as Record<string, PayloadSchema>)[name];
   if (!schema) return false;
   return validatePayloadAgainstSchema(payload, schema);
 }
@@ -143,13 +149,14 @@ export const GUEST_TO_HOST_PAYLOAD_SCHEMA = {
   "HTTP_REQUEST": { "body": ["unknown", true] as const, "headers": ["unknown", true] as const, "method": ["string", true] as const, "requestId": ["string", false] as const, "url": ["string", false] as const },
   "SEND_EMAIL": { "requestId": ["string", false] as const, "subject": ["string", false] as const, "to": ["string", false] as const },
   "SET_APP_LANGUAGE": { "language": ["string", false] as const, "requestId": ["string", false] as const },
+  "SET_TOOLBOX_ENTRIES": { "entries": [{ "camera": ["boolean", true] as const, "file": ["boolean", true] as const, "location": ["boolean", true] as const, "photo": ["boolean", true] as const, "sendKey": ["boolean", true] as const, "webSearch": ["boolean", true] as const }, false] as const, "requestId": ["string", false] as const },
   "SPEECH_REQUEST": { "action": ["unknown", false] as const, "requestId": ["string", false] as const, "text": ["string", true] as const },
 } as const;
 export function validateGuestToHostPayload<E extends GuestToHostEventName>(
   name: E,
   payload: unknown
 ): payload is GuestToHostEventPayloads[E] {
-  const schema = (GUEST_TO_HOST_PAYLOAD_SCHEMA as Record<string, Record<string, any>>)[name];
+  const schema = (GUEST_TO_HOST_PAYLOAD_SCHEMA as Record<string, PayloadSchema>)[name];
   if (!schema) return false;
   return validatePayloadAgainstSchema(payload, schema);
 }
