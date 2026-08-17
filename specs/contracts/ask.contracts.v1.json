@@ -88,6 +88,14 @@
         "success": "boolean",
         "error": "unknown?"
       }
+    },
+    "SET_TOOLBOX_ENTRIES_RESULT": {
+      "summary": "Host 返回工具栏入口可见性设置结果",
+      "payload": {
+        "requestId": "string",
+        "success": "boolean",
+        "error": "unknown?"
+      }
     }
   },
   "guestToHost": {
@@ -169,6 +177,20 @@
         "requestId": "string",
         "to": "string",
         "subject": "string"
+      }
+    },
+    "SET_TOOLBOX_ENTRIES": {
+      "summary": "Guest 覆盖 Host 工具栏入口可见性，未传字段默认 true",
+      "payload": {
+        "requestId": "string",
+        "entries": {
+          "camera": "boolean?",
+          "photo": "boolean?",
+          "file": "boolean?",
+          "location": "boolean?",
+          "webSearch": "boolean?",
+          "sendKey": "boolean?"
+        }
       }
     }
   }

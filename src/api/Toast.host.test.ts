@@ -6,7 +6,14 @@
  */
 
 import type { ToastOptions } from '../types';
-import { getDurationMs, getGravityValue, HostToast, type HostToastInternal } from './Toast.host';
+import {
+  getDurationMs,
+  getGravityValue,
+  HostToast,
+  _injectMocks,
+  _resetReactNative,
+  type HostToastInternal,
+} from './Toast.host';
 
 describe('Toast (Host)', () => {
   describe('getDurationMs', () => {
@@ -51,6 +58,10 @@ describe('Toast (Host)', () => {
     let toast: HostToast;
 
     beforeEach(() => {
+      // 重置 RN 模块状态并注入 ios 平台，确保 fallback 走 console.log；
+      // 否则 CI 环境 react-native mock 可能让 show 走 Android 分支不触发 console。
+      _resetReactNative();
+      _injectMocks({ OS: 'ios' } as any, {} as any);
       toast = new HostToast();
     });
 
