@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: askaway-linux
+    runs-on: [self-hosted, askaway-linux]
 
     steps:
       - name: Checkout code
