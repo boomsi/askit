@@ -27,10 +27,9 @@ describe('HostHttpHandler', () => {
       headers: { get: () => 'application/json' },
       json: () => Promise.resolve({ a: 1 }),
     });
-    const res = await HostHttpHandler.handleRequest({ requestId: 'r1', url: 'http://x' });
+    const res = await HostHttpHandler.handleRequest({ url: 'http://x' });
     expect(res.success).toBe(true);
     expect(res.status).toBe(200);
-    expect(res.requestId).toBe('r1');
     expect(res.data).toEqual({ a: 1 });
   });
 
@@ -41,14 +40,14 @@ describe('HostHttpHandler', () => {
       headers: { get: () => 'text/plain' },
       text: () => Promise.resolve('hello'),
     });
-    const res = await HostHttpHandler.handleRequest({ requestId: 'r1', url: 'http://x' });
+    const res = await HostHttpHandler.handleRequest({ url: 'http://x' });
     expect(res.data).toBe('hello');
   });
 
   it('fetch 失败归一 status:0', async () => {
     (globalThis as unknown as { fetch: unknown }).fetch = () =>
       Promise.reject(new Error('network'));
-    const res = await HostHttpHandler.handleRequest({ requestId: 'r1', url: 'http://x' });
+    const res = await HostHttpHandler.handleRequest({ url: 'http://x' });
     expect(res.success).toBe(false);
     expect(res.status).toBe(0);
     expect((res.data as { message: string }).message).toBe('network');
@@ -66,7 +65,6 @@ describe('HostHttpHandler', () => {
       });
     };
     await HostHttpHandler.handleRequest({
-      requestId: 'r1',
       url: 'http://x',
       method: 'POST',
       body: { k: 1 },
@@ -88,7 +86,7 @@ describe('HostHttpHandler', () => {
         text: () => Promise.resolve(''),
       });
     };
-    await HostHttpHandler.handleRequest({ requestId: 'r1', url: 'http://x' });
+    await HostHttpHandler.handleRequest({ url: 'http://x' });
     expect(capturedInit?.method).toBe('GET');
     expect(capturedInit?.body).toBeUndefined();
   });

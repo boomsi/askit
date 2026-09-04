@@ -23,7 +23,6 @@
     "SPEECH_RESPONSE": {
       "summary": "Host 返回语音操作执行结果",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "error": "unknown?"
       }
@@ -31,7 +30,6 @@
     "HTTP_RESPONSE": {
       "summary": "Host 返回 HTTP 请求结果给 Guest",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "data": "unknown",
         "status": "number"
@@ -40,7 +38,6 @@
     "SEND_APP_INFO": {
       "summary": "Host 返回当前应用信息",
       "payload": {
-        "requestId": "string",
         "appName": "string",
         "logo": "string",
         "languageContents": "unknown",
@@ -52,7 +49,6 @@
     "CLEAR_CHAT_HISTORY_RESULT": {
       "summary": "Host 返回清除对话记录结果",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "error": "unknown?"
       }
@@ -60,7 +56,6 @@
     "CLOSE_EXTENSION_RESULT": {
       "summary": "Host 关闭拓展面板完成",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "error": "unknown?"
       }
@@ -68,7 +63,6 @@
     "LANGUAGE_LIST": {
       "summary": "Host 返回语言列表",
       "payload": {
-        "requestId": "string",
         "languages": "unknown",
         "current": "string"
       }
@@ -76,7 +70,6 @@
     "SET_APP_LANGUAGE_RESULT": {
       "summary": "Host 返回设置语言结果",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "error": "unknown?"
       }
@@ -84,7 +77,6 @@
     "SEND_EMAIL_RESULT": {
       "summary": "Host 返回发送邮件结果",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "error": "unknown?"
       }
@@ -92,7 +84,6 @@
     "SET_TOOLBOX_ENTRIES_RESULT": {
       "summary": "Host 返回工具栏入口可见性设置结果",
       "payload": {
-        "requestId": "string",
         "success": "boolean",
         "error": "unknown?"
       }
@@ -126,7 +117,6 @@
       "summary": "Guest 请求语音合成或控制",
       "response": "SPEECH_RESPONSE",
       "payload": {
-        "requestId": "string",
         "text": "string?",
         "action": "'speak' | 'stop' | 'pause' | 'resume'"
       }
@@ -135,7 +125,6 @@
       "summary": "Guest 发起 HTTP 请求",
       "response": "HTTP_RESPONSE",
       "payload": {
-        "requestId": "string",
         "url": "string",
         "method": "string?",
         "headers": "unknown?",
@@ -145,44 +134,34 @@
     "GET_APP_INFO": {
       "summary": "Guest 请求当前 应用信息",
       "response": "SEND_APP_INFO",
-      "payload": {
-        "requestId": "string"
-      }
+      "payload": {}
     },
     "GET_LANGUAGE_LIST": {
       "summary": "Guest 请求获取语言列表",
       "response": "LANGUAGE_LIST",
-      "payload": {
-        "requestId": "string"
-      }
+      "payload": {}
     },
     "SET_APP_LANGUAGE": {
       "summary": "Guest 请求设置当前引用语言",
       "response": "SET_APP_LANGUAGE_RESULT",
       "payload": {
-        "requestId": "string",
         "language": "string"
       }
     },
     "CLEAR_CHAT_HISTORY": {
       "summary": "Guest 请求清除对话记录",
       "response": "CLEAR_CHAT_HISTORY_RESULT",
-      "payload": {
-        "requestId": "string"
-      }
+      "payload": {}
     },
     "CLOSE_EXTENSION": {
       "summary": "Guest 请求关闭扩展",
       "response": "CLOSE_EXTENSION_RESULT",
-      "payload": {
-        "requestId": "string"
-      }
+      "payload": {}
     },
     "SEND_EMAIL": {
       "summary": "Guest 请求发送邮件",
       "response": "SEND_EMAIL_RESULT",
       "payload": {
-        "requestId": "string",
         "to": "string",
         "subject": "string"
       }
@@ -191,7 +170,6 @@
       "summary": "Guest 覆盖 Host 工具栏入口可见性，未传字段默认 true",
       "response": "SET_TOOLBOX_ENTRIES_RESULT",
       "payload": {
-        "requestId": "string",
         "entries": {
           "camera": "boolean?",
           "photo": "boolean?",

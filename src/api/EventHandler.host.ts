@@ -1,7 +1,8 @@
 import type {
   EventPairs,
+  GuestToHostBusinessPayloads,
   GuestToHostEventPayloads,
-  HostToGuestEventPayloads,
+  HostToGuestBusinessPayloads,
 } from 'askit/contracts';
 import { EVENT_PAIRS } from 'askit/contracts';
 import { HostHttpHandler } from './Https.host';
@@ -32,9 +33,9 @@ export type MessageLogHandler = (
 // 宿主只声明业务函数（入参/返回类型按事件对精确推导），配对只存在于契约一处。
 export type HandlerRegistry = Partial<{
   [K in keyof EventPairs]: (
-    payload: GuestToHostEventPayloads[K],
+    payload: GuestToHostBusinessPayloads[K],
     tabId?: string
-  ) => Promise<HostToGuestEventPayloads[EventPairs[K]]>;
+  ) => Promise<HostToGuestBusinessPayloads[EventPairs[K]]>;
 }>;
 
 function isRegisteredEvent(event: string, handlers: HandlerRegistry): event is keyof EventPairs {
@@ -56,18 +57,14 @@ export class EventHandler {
   private static handlers: HandlerRegistry = {
     HTTP_REQUEST: (payload) => HostHttpHandler.handleRequest(payload),
     // 占位实现：宿主应通过 setup 的 customHandlers 覆盖，提供真实应用信息
-    GET_APP_INFO: async (payload) => {
-      const { requestId } = payload;
-      return {
-        requestId,
-        appName: '',
-        logo: '',
-        languageContents: null,
-        favoriteCount: 0,
-        usedCount: 0,
-        author: '',
-      };
-    },
+    GET_APP_INFO: async () => ({
+      appName: '',
+      logo: '',
+      languageContents: null,
+      favoriteCount: 0,
+      usedCount: 0,
+      author: '',
+    }),
   };
 
   // 按 K 泛型化的分发：编译期锁定 payload 与 handler 的对应关系。
@@ -76,7 +73,7 @@ export class EventHandler {
   private static async handleKnownEvent<K extends keyof EventPairs>(
     engine: Engine,
     event: K,
-    payload: GuestToHostEventPayloads[K],
+    payload: GuestToHostEventPayloads[K], // 完整线上载荷（含 requestId），handler 入参收窄为业务字段
     tabId: string,
     onLog: MessageLogHandler | undefined,
     customHandlers: HandlerRegistry | undefined
@@ -87,9 +84,11 @@ export class EventHandler {
       return;
     }
 
-    // 响应事件由契约配对表查得，宿主 registry 不再声明（配对唯一存在于契约）
+    // 响应事件由契约配对表查得，宿主 registry 不再声明（配对唯一存在于契约）；
+    // requestId 是管道字段，handler 返回纯业务结果，分发时统一注入回传
     const responseEvent = EVENT_PAIRS[event];
-    const responsePayload = await handler(payload, tabId);
+    const businessPayload = await handler(payload, tabId);
+    const responsePayload = { ...businessPayload, requestId: payload.requestId };
     engine.sendEvent(responseEvent, responsePayload);
     if (onLog) {
       onLog('hostToGuest', responseEvent, responsePayload, tabId);

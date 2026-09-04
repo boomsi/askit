@@ -114,20 +114,75 @@ function renderPayloadSchema(payload: unknown): string {
   return `{ ${fields.join(', ')} }`;
 }
 
-function renderPayloadMap(
+/**
+ * requestId 是协议管道字段，不写在契约 payload 中（业务归业务）。
+ * 对参与请求-响应配对的事件（请求方与被指向的响应方），生成时统一注入：
+ * 类型层拼入 `{ requestId: string }`，运行时 schema 注入 required 校验项。
+ */
+const PIPE_REQUEST_ID_TYPE = '"requestId": string;';
+const PIPE_REQUEST_ID_SCHEMA = '"requestId": ["string", false] as const,';
+
+function renderPairedPayloadType(payload: unknown): string {
+  const base = renderPayloadType(payload);
+  if (base === 'unknown' || base === '{  }') return `{ ${PIPE_REQUEST_ID_TYPE} }`;
+  return base.replace(/\}\s*$/, ` ${PIPE_REQUEST_ID_TYPE} }`);
+}
+
+function renderBusinessPayloadType(payload: unknown): string {
+  const base = renderPayloadType(payload);
+  return base === 'unknown' || base === '{  }' ? '{}' : base;
+}
+
+function renderPairedPayloadSchema(payload: unknown): string {
+  const base = renderPayloadSchema(payload);
+  // 空业务载荷：payload 缺省返回 '{}'，payload 为空对象返回 '{  }'
+  if (base === '{}' || base === '{  }') return `{ ${PIPE_REQUEST_ID_SCHEMA} }`;
+  return base.replace(/\}\s*$/, `, ${PIPE_REQUEST_ID_SCHEMA} }`);
+}
+
+/** 按事件的配对身份渲染完整（线上）payload 类型：配对事件注入 requestId，其余原样 */
+function renderFullPayloadMap(
   events: Record<string, ContractsEventSpec>,
-  render: (payload: unknown) => string
+  pairedNames: Set<string>
 ): string {
   const names = Object.keys(events).sort();
-  const lines = names.map((name) => `  ${JSON.stringify(name)}: ${render(events[name]?.payload)};`);
+  const lines = names.map((name) => {
+    const payload = events[name]?.payload;
+    const rendered = pairedNames.has(name)
+      ? renderPairedPayloadType(payload)
+      : renderPayloadType(payload);
+    return `  ${JSON.stringify(name)}: ${rendered};`;
+  });
   return `{\n${lines.join('\n')}\n}`;
 }
 
-function renderPayloadSchemaMap(events: Record<string, ContractsEventSpec>): string {
-  const names = Object.keys(events).sort();
+/** 仅配对事件的业务 payload（不含 requestId），供 ask.call 参数 / host handler 返回 */
+function renderBusinessPayloadMap(
+  events: Record<string, ContractsEventSpec>,
+  pairedNames: Set<string>
+): string {
+  const names = Object.keys(events)
+    .filter((n) => pairedNames.has(n))
+    .sort();
   const lines = names.map(
-    (name) => `  ${JSON.stringify(name)}: ${renderPayloadSchema(events[name]?.payload)},`
+    (name) => `  ${JSON.stringify(name)}: ${renderBusinessPayloadType(events[name]?.payload)};`
   );
+  return `{\n${lines.join('\n')}\n}`;
+}
+
+/** 运行时 schema：校验的是线上完整消息，配对事件注入 requestId required 项 */
+function renderFullPayloadSchemaMap(
+  events: Record<string, ContractsEventSpec>,
+  pairedNames: Set<string>
+): string {
+  const names = Object.keys(events).sort();
+  const lines = names.map((name) => {
+    const payload = events[name]?.payload;
+    const rendered = pairedNames.has(name)
+      ? renderPairedPayloadSchema(payload)
+      : renderPayloadSchema(payload);
+    return `  ${JSON.stringify(name)}: ${rendered},`;
+  });
   return `{\n${lines.join('\n')}\n} as const`;
 }
 
@@ -196,8 +251,14 @@ async function main(): Promise<void> {
 
   const eventPairs = extractEventPairs(guestToHost, hostToGuest);
 
-  const hostToGuestPayloads = renderPayloadMap(hostToGuest, renderPayloadType);
-  const guestToHostPayloads = renderPayloadMap(guestToHost, renderPayloadType);
+  // 配对身份集合：请求方（guestToHost 声明 response）与响应方（被 response 指向）
+  const pairedRequestNames = new Set(Object.keys(eventPairs));
+  const pairedResponseNames = new Set(Object.values(eventPairs));
+
+  const hostToGuestPayloads = renderFullPayloadMap(hostToGuest, pairedResponseNames);
+  const guestToHostPayloads = renderFullPayloadMap(guestToHost, pairedRequestNames);
+  const hostToGuestBusiness = renderBusinessPayloadMap(hostToGuest, pairedResponseNames);
+  const guestToHostBusiness = renderBusinessPayloadMap(guestToHost, pairedRequestNames);
 
   const content = `/**
  * 由脚本自动生成，请勿手改。
@@ -230,6 +291,14 @@ ${renderTypeGuard('GUEST_TO_HOST_EVENT_NAMES', 'GuestToHostEventName', 'isGuestT
 export const EVENT_PAIRS = ${renderEventPairs(eventPairs)};
 export type EventPairs = typeof EVENT_PAIRS;
 export type RequestEventName = keyof EventPairs;
+
+/**
+ * 业务载荷（不含 requestId）：requestId 是协议管道字段，由生成器对配对事件
+ * 统一注入到完整的 Event Payloads 类型与运行时 schema，业务代码不感知——
+ * guest 侧 ask.call 的入参、host 侧 handler 的返回值使用以下业务类型。
+ */
+export type GuestToHostBusinessPayloads = ${guestToHostBusiness};
+export type HostToGuestBusinessPayloads = ${hostToGuestBusiness};
 
 export type HostToGuestEvent<E extends HostToGuestEventName = HostToGuestEventName> = {
   name: E;
@@ -289,7 +358,7 @@ function validatePayloadAgainstSchema(payload: unknown, schema: PayloadSchema): 
   return true;
 }
 
-export const HOST_TO_GUEST_PAYLOAD_SCHEMA = ${renderPayloadSchemaMap(hostToGuest)};
+export const HOST_TO_GUEST_PAYLOAD_SCHEMA = ${renderFullPayloadSchemaMap(hostToGuest, pairedResponseNames)};
 export function validateHostToGuestPayload<E extends HostToGuestEventName>(
   name: E,
   payload: unknown
@@ -299,7 +368,7 @@ export function validateHostToGuestPayload<E extends HostToGuestEventName>(
   return validatePayloadAgainstSchema(payload, schema);
 }
 
-export const GUEST_TO_HOST_PAYLOAD_SCHEMA = ${renderPayloadSchemaMap(guestToHost)};
+export const GUEST_TO_HOST_PAYLOAD_SCHEMA = ${renderFullPayloadSchemaMap(guestToHost, pairedRequestNames)};
 export function validateGuestToHostPayload<E extends GuestToHostEventName>(
   name: E,
   payload: unknown

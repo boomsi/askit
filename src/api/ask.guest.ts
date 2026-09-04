@@ -1,6 +1,8 @@
 import type {
   EventPairs,
+  GuestToHostBusinessPayloads,
   GuestToHostEventPayloads,
+  HostToGuestBusinessPayloads,
   HostToGuestEventPayloads,
 } from 'askit/contracts';
 import { EVENT_PAIRS } from 'askit/contracts';
@@ -106,14 +108,14 @@ export const ask = {
    * 调用宿主能力并等待响应
    *
    * @param request 契约中的请求事件名（响应事件由 EventPairs 查表，无需声明）
-   * @param args.payload 业务载荷（不含 requestId，由本方法自动生成并注入；
+   * @param args.payload 业务载荷（requestId 由本方法自动生成并注入，类型不含它；
    *   无必填字段时可省略，有必填字段时漏传编译报错）
    * @param args.options.timeoutMs 超时毫秒数，默认 10 秒
    */
   call<K extends keyof EventPairs>(
     request: K,
-    ...args: CallArgs<Omit<GuestToHostEventPayloads[K], 'requestId'>>
-  ): Promise<HostToGuestEventPayloads[EventPairs[K]]> {
+    ...args: CallArgs<GuestToHostBusinessPayloads[K]>
+  ): Promise<HostToGuestBusinessPayloads[EventPairs[K]]> {
     const [payload, options] = args;
     const responseEvent = EVENT_PAIRS[request];
     const requestId = nextRequestId(String(request));
@@ -122,7 +124,9 @@ export const ask = {
 
     ensureResponseDispatcher(String(responseEvent));
 
-    return new Promise<HostToGuestEventPayloads[EventPairs[K]]>((resolve, reject) => {
+    // 返回业务载荷类型（requestId 是管道字段，调用方不需要）；运行时响应对象
+    // 含 requestId，结构兼容直接透传
+    return new Promise<HostToGuestBusinessPayloads[EventPairs[K]]>((resolve, reject) => {
       const emit = bridge().__keel_emitEvent;
       if (typeof emit !== 'function') {
         reject(new Error('[ask] 通道不可用：__keel_emitEvent 未注入（不在 keel 沙箱内？）'));
@@ -154,9 +158,12 @@ export const ask = {
   /**
    * 单向通知宿主（fire-and-forget，无响应）
    *
-   * @param event 契约中的 guestToHost 事件名（未声明 response 的通知类事件）
+   * 只接受未声明 response 的通知类事件——配对事件必须走 call（否则宿主
+   * 响应无人接收）。通知类事件无管道字段，payload 即契约业务载荷。
+   *
+   * @param event 契约中的 guestToHost 通知事件名
    */
-  send<K extends keyof GuestToHostEventPayloads>(
+  send<K extends Exclude<keyof GuestToHostEventPayloads, keyof EventPairs>>(
     event: K,
     ...payload: OptionalPayload<GuestToHostEventPayloads[K]>
   ): void {

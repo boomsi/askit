@@ -1,7 +1,7 @@
-import type { GuestToHostEventPayloads, HostToGuestEventPayloads } from 'askit/contracts';
+import type { GuestToHostBusinessPayloads, HostToGuestBusinessPayloads } from 'askit/contracts';
 
-type THttpRequest = GuestToHostEventPayloads['HTTP_REQUEST'];
-export type THttpResponse = HostToGuestEventPayloads['HTTP_RESPONSE'];
+type THttpRequest = GuestToHostBusinessPayloads['HTTP_REQUEST'];
+export type THttpResponse = HostToGuestBusinessPayloads['HTTP_RESPONSE'];
 
 type HttpHeaders = Record<string, string>;
 
@@ -13,7 +13,7 @@ export class HostHttpHandler {
    * @param payload 请求负载
    */
   static async handleRequest(payload: THttpRequest): Promise<THttpResponse> {
-    const { requestId, url, method = 'GET', headers, body } = payload;
+    const { url, method = 'GET', headers, body } = payload;
 
     const controller = new globalThis.AbortController();
     const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
@@ -45,16 +45,14 @@ export class HostHttpHandler {
         : await response.text();
 
       return {
-        requestId,
         success: response.ok,
         status: response.status,
         data,
       };
     } catch (error) {
-      console.error(`[HostHttpHandler] 请求失败 (ID: ${requestId}):`, error);
+      console.error(`[HostHttpHandler] 请求失败 (${url}):`, error);
       const message = error instanceof Error ? error.message : String(error);
       return {
-        requestId,
         status: 0,
         success: false,
         data: { message },

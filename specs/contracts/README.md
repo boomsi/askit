@@ -23,7 +23,7 @@
 "GET_APP_INFO": {
   "summary": "Guest 请求当前应用信息",
   "response": "SEND_APP_INFO",
-  "payload": { "requestId": "string" }
+  "payload": {}
 }
 ```
 
@@ -48,4 +48,5 @@ bun run generate:contracts   # specs/contracts/ask.contracts.v1.json → src/con
 
 - `// ---` 开头的 key 是**分组注释**，过滤后不进入生成的事件名与类型
 - payload 运行时校验（`HOST_TO_GUEST_PAYLOAD_SCHEMA` / `GUEST_TO_HOST_PAYLOAD_SCHEMA`）随契约一并生成，供宿主入口与 DevTools 使用
-- `requestId` 字段保留在契约中（宿主需回传），但由 `ask.call` 在 guest 侧自动生成注入，业务代码不写
+- `requestId` 是**协议管道字段**，不写在契约 payload 中：生成器对配对事件统一注入到完整载荷类型与运行时 schema（`GuestToHostEventPayloads` / `HostToGuestEventPayloads` 仍含它，线上协议不变），同时导出业务载荷类型（`GuestToHostBusinessPayloads` / `HostToGuestBusinessPayloads`）——`ask.call` 的入参/返回、host handler 的入参/返回都用业务类型，两端业务代码与类型提示均不出现 requestId
+- guest 侧 `requestId` 由 `ask.call` 自动生成；host 侧由 `EventHandler` 分发时自动回传

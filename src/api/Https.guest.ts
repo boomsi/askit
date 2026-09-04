@@ -1,7 +1,7 @@
-import type { HostToGuestEventPayloads } from 'askit/contracts';
+import type { HostToGuestBusinessPayloads } from 'askit/contracts';
 import { ask } from './ask.guest';
 
-type HttpResult = HostToGuestEventPayloads['HTTP_RESPONSE'];
+type HttpResult = HostToGuestBusinessPayloads['HTTP_RESPONSE'];
 export type HttpResponse<D> = Omit<HttpResult, 'data'> & { data: D };
 
 type HttpHeaders = Record<string, string>;

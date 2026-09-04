@@ -127,10 +127,9 @@ once in the contract JSON — hosts never repeat it):
 EventHandler.setup(engine, {
   tabId,
   handlers: {
-    GET_APP_INFO: async (payload) => ({
-      requestId: payload.requestId,
+    GET_APP_INFO: async () => ({
       appName: 'demo',
-      /* ... */
+      /* ... 仅业务字段；requestId 由分发层注入回传 */
     }),
   },
 });
