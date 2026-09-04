@@ -6,7 +6,7 @@
  */
 
 // APIs (Guest implementations)
-export { EventEmitter, Haptic, Toast, useHttp, useEventBridge } from './api/index.guest';
+export { ask, EventEmitter, Haptic, http, Toast } from './api/index.guest';
 // Types (same as host for consistent API)
 export type {
   BaseProps,
@@ -19,12 +19,13 @@ export type {
   // Haptic
   HapticAPI,
   HapticType,
-  StyleObject,
-  StyleProp,
+  MyTouchableOpacityProps,
   StepItem,
   // StepList
   StepListProps,
   StepStatus,
+  StyleObject,
+  StyleProp,
   // ThemeView
   ThemeViewProps,
   // Toast
@@ -34,19 +35,18 @@ export type {
   ToastPosition,
   // UserAvatar
   UserAvatarProps,
-  MyTouchableOpacityProps,
 } from './types';
 // UI Components (DSL identifiers)
 export {
   ChatBubble,
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSubText,
+  DropdownMenuText,
+  GlobalAlert,
+  MyTouchableOpacity,
   Panel,
   StepList,
   ThemeView,
   UserAvatar,
-  MyTouchableOpacity,
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuText,
-  DropdownMenuSubText,
-  GlobalAlert,
 } from './ui/index.guest';

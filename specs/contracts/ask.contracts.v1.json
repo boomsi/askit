@@ -124,6 +124,7 @@
     "// --- 标准原生能力 ---": {},
     "SPEECH_REQUEST": {
       "summary": "Guest 请求语音合成或控制",
+      "response": "SPEECH_RESPONSE",
       "payload": {
         "requestId": "string",
         "text": "string?",
@@ -132,6 +133,7 @@
     },
     "HTTP_REQUEST": {
       "summary": "Guest 发起 HTTP 请求",
+      "response": "HTTP_RESPONSE",
       "payload": {
         "requestId": "string",
         "url": "string",
@@ -142,18 +144,21 @@
     },
     "GET_APP_INFO": {
       "summary": "Guest 请求当前 应用信息",
+      "response": "SEND_APP_INFO",
       "payload": {
         "requestId": "string"
       }
     },
     "GET_LANGUAGE_LIST": {
       "summary": "Guest 请求获取语言列表",
+      "response": "LANGUAGE_LIST",
       "payload": {
         "requestId": "string"
       }
     },
     "SET_APP_LANGUAGE": {
       "summary": "Guest 请求设置当前引用语言",
+      "response": "SET_APP_LANGUAGE_RESULT",
       "payload": {
         "requestId": "string",
         "language": "string"
@@ -161,18 +166,21 @@
     },
     "CLEAR_CHAT_HISTORY": {
       "summary": "Guest 请求清除对话记录",
+      "response": "CLEAR_CHAT_HISTORY_RESULT",
       "payload": {
         "requestId": "string"
       }
     },
     "CLOSE_EXTENSION": {
       "summary": "Guest 请求关闭扩展",
+      "response": "CLOSE_EXTENSION_RESULT",
       "payload": {
         "requestId": "string"
       }
     },
     "SEND_EMAIL": {
       "summary": "Guest 请求发送邮件",
+      "response": "SEND_EMAIL_RESULT",
       "payload": {
         "requestId": "string",
         "to": "string",
@@ -181,6 +189,7 @@
     },
     "SET_TOOLBOX_ENTRIES": {
       "summary": "Guest 覆盖 Host 工具栏入口可见性，未传字段默认 true",
+      "response": "SET_TOOLBOX_ENTRIES_RESULT",
       "payload": {
         "requestId": "string",
         "entries": {

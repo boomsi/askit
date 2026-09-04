@@ -43,11 +43,19 @@ declare module 'bun:test' {
     toBeFalsy(): void;
     toContain(expected: unknown): void;
     toHaveLength(expected: number): void;
+    toMatch(pattern: RegExp | string): void;
+    toBeLessThanOrEqual(n: number): void;
+    toBeGreaterThanOrEqual(n: number): void;
     toThrow(expected?: unknown): void;
+    resolves: {
+      toEqual(expected: unknown): void;
+      toMatchObject(expected: Record<string, unknown>): void;
+    };
     not: {
       toBe(expected: unknown): void;
       toEqual(expected: unknown): void;
       toBeNull(): void;
+      toContain(expected: unknown): void;
       toThrow(): void;
     };
   };

@@ -41,27 +41,35 @@ describe('EventHandler.host', () => {
     expect(mock.sent).toHaveLength(0);
   });
 
+  it('原型链属性（toString 等）不被误当已注册事件', async () => {
+    const mock = createMockEngine();
+    EventHandler.setup(mock.engine as never, { tabId: 't1' });
+    // in 检查会命中 Object.prototype 继承属性，hasOwn 不会
+    await mock.msg!({ event: 'toString', payload: {} });
+    await mock.msg!({ event: 'constructor', payload: {} });
+    expect(mock.sent).toHaveLength(0);
+  });
+
   it('customHandler 覆盖默认 GET_APP_INFO', async () => {
     const mock = createMockEngine();
     EventHandler.setup(mock.engine as never, {
       tabId: 't1',
       handlers: {
-        GET_APP_INFO: {
-          responseEvent: 'SEND_APP_INFO',
-          handle: async () => ({
-            requestId: 'r1',
-            appName: 'Custom',
-            logo: '',
-            languageContents: null,
-            favoriteCount: 0,
-            usedCount: 0,
-            author: '',
-          }),
-        },
+        GET_APP_INFO: async () => ({
+          requestId: 'r1',
+          appName: 'Custom',
+          logo: '',
+          languageContents: null,
+          favoriteCount: 0,
+          usedCount: 0,
+          author: '',
+        }),
       },
     });
     await mock.msg!({ event: 'GET_APP_INFO', payload: { requestId: 'r1' } });
-    expect((mock.sent[0]?.payload as { appName: string }).appName).toBe('Custom');
+    expect(mock.sent).toHaveLength(1);
+    const sent = mock.sent[0] as { payload: { appName: string } };
+    expect(sent.payload.appName).toBe('Custom');
   });
 
   it('无 tabId 时 setup 返回 no-op', () => {
@@ -88,11 +96,8 @@ describe('EventHandler.host', () => {
     EventHandler.setup(mock.engine as never, {
       tabId: 't1',
       handlers: {
-        GET_APP_INFO: {
-          responseEvent: 'SEND_APP_INFO',
-          handle: async () => {
-            throw new Error('boom');
-          },
+        GET_APP_INFO: async () => {
+          throw new Error('boom');
         },
       },
     });

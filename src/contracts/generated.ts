@@ -12,8 +12,6 @@ export type AskContractName = typeof ASK_CONTRACT_NAME;
 export type AskContractVersion = typeof ASK_CONTRACT_VERSION;
 
 export type HostToGuestEventPayloads = {
-  "// --- 标准原生能力 ---": unknown;
-  "// --- 系统内置 ---": unknown;
   "CLEAR_CHAT_HISTORY_RESULT": { "error"?: unknown; "requestId": string; "success": boolean; };
   "CLOSE_EXTENSION_RESULT": { "error"?: unknown; "requestId": string; "success": boolean; };
   "HOST_VISIBILITY": { "tabId"?: string; "visible": boolean; };
@@ -27,14 +25,12 @@ export type HostToGuestEventPayloads = {
   "SPEECH_RESPONSE": { "error"?: unknown; "requestId": string; "success": boolean; };
 };
 export type HostToGuestEventName = keyof HostToGuestEventPayloads;
-export const HOST_TO_GUEST_EVENT_NAMES = ["// --- 标准原生能力 ---", "// --- 系统内置 ---", "CLEAR_CHAT_HISTORY_RESULT", "CLOSE_EXTENSION_RESULT", "HOST_VISIBILITY", "HTTP_RESPONSE", "LANGUAGE_LIST", "RECEIVER_BACKPRESSURE", "SEND_APP_INFO", "SEND_EMAIL_RESULT", "SET_APP_LANGUAGE_RESULT", "SET_TOOLBOX_ENTRIES_RESULT", "SPEECH_RESPONSE"] as const;
+export const HOST_TO_GUEST_EVENT_NAMES = ["CLEAR_CHAT_HISTORY_RESULT", "CLOSE_EXTENSION_RESULT", "HOST_VISIBILITY", "HTTP_RESPONSE", "LANGUAGE_LIST", "RECEIVER_BACKPRESSURE", "SEND_APP_INFO", "SEND_EMAIL_RESULT", "SET_APP_LANGUAGE_RESULT", "SET_TOOLBOX_ENTRIES_RESULT", "SPEECH_RESPONSE"] as const;
 export function isHostToGuestEventName(name: string): name is HostToGuestEventName {
   return ((HOST_TO_GUEST_EVENT_NAMES as readonly string[]).includes(name));
 }
 
 export type GuestToHostEventPayloads = {
-  "// --- 标准原生能力 ---": unknown;
-  "// --- 系统内置 ---": unknown;
   "ASKIT_HAPTIC_TRIGGER": { "type"?: string; };
   "ASKIT_TOAST_SHOW": { "message": string; "options"?: unknown; };
   "CLEAR_CHAT_HISTORY": { "requestId": string; };
@@ -49,10 +45,29 @@ export type GuestToHostEventPayloads = {
   "SPEECH_REQUEST": { "action": unknown; "requestId": string; "text"?: string; };
 };
 export type GuestToHostEventName = keyof GuestToHostEventPayloads;
-export const GUEST_TO_HOST_EVENT_NAMES = ["// --- 标准原生能力 ---", "// --- 系统内置 ---", "ASKIT_HAPTIC_TRIGGER", "ASKIT_TOAST_SHOW", "CLEAR_CHAT_HISTORY", "CLOSE_EXTENSION", "GET_APP_INFO", "GET_LANGUAGE_LIST", "GUEST_SLEEP_STATE", "HTTP_REQUEST", "SEND_EMAIL", "SET_APP_LANGUAGE", "SET_TOOLBOX_ENTRIES", "SPEECH_REQUEST"] as const;
+export const GUEST_TO_HOST_EVENT_NAMES = ["ASKIT_HAPTIC_TRIGGER", "ASKIT_TOAST_SHOW", "CLEAR_CHAT_HISTORY", "CLOSE_EXTENSION", "GET_APP_INFO", "GET_LANGUAGE_LIST", "GUEST_SLEEP_STATE", "HTTP_REQUEST", "SEND_EMAIL", "SET_APP_LANGUAGE", "SET_TOOLBOX_ENTRIES", "SPEECH_REQUEST"] as const;
 export function isGuestToHostEventName(name: string): name is GuestToHostEventName {
   return ((GUEST_TO_HOST_EVENT_NAMES as readonly string[]).includes(name));
 }
+
+/**
+ * 请求-响应配对表：guestToHost 事件上声明了 "response" 的子集。
+ * ask.call 据此查表响应事件，EventHandler/HandlerRegistry 据此推导 handler 类型，
+ * 配对只存在于契约一处，两端零重复声明。
+ */
+export const EVENT_PAIRS = {
+  "CLEAR_CHAT_HISTORY": "CLEAR_CHAT_HISTORY_RESULT",
+  "CLOSE_EXTENSION": "CLOSE_EXTENSION_RESULT",
+  "GET_APP_INFO": "SEND_APP_INFO",
+  "GET_LANGUAGE_LIST": "LANGUAGE_LIST",
+  "HTTP_REQUEST": "HTTP_RESPONSE",
+  "SEND_EMAIL": "SEND_EMAIL_RESULT",
+  "SET_APP_LANGUAGE": "SET_APP_LANGUAGE_RESULT",
+  "SET_TOOLBOX_ENTRIES": "SET_TOOLBOX_ENTRIES_RESULT",
+  "SPEECH_REQUEST": "SPEECH_RESPONSE",
+} as const;
+export type EventPairs = typeof EVENT_PAIRS;
+export type RequestEventName = keyof EventPairs;
 
 export type HostToGuestEvent<E extends HostToGuestEventName = HostToGuestEventName> = {
   name: E;
@@ -113,8 +128,6 @@ function validatePayloadAgainstSchema(payload: unknown, schema: PayloadSchema): 
 }
 
 export const HOST_TO_GUEST_PAYLOAD_SCHEMA = {
-  "// --- 标准原生能力 ---": {},
-  "// --- 系统内置 ---": {},
   "CLEAR_CHAT_HISTORY_RESULT": { "error": ["unknown", true] as const, "requestId": ["string", false] as const, "success": ["boolean", false] as const },
   "CLOSE_EXTENSION_RESULT": { "error": ["unknown", true] as const, "requestId": ["string", false] as const, "success": ["boolean", false] as const },
   "HOST_VISIBILITY": { "tabId": ["string", true] as const, "visible": ["boolean", false] as const },
@@ -137,8 +150,6 @@ export function validateHostToGuestPayload<E extends HostToGuestEventName>(
 }
 
 export const GUEST_TO_HOST_PAYLOAD_SCHEMA = {
-  "// --- 标准原生能力 ---": {},
-  "// --- 系统内置 ---": {},
   "ASKIT_HAPTIC_TRIGGER": { "type": ["string", true] as const },
   "ASKIT_TOAST_SHOW": { "message": ["string", false] as const, "options": ["unknown", true] as const },
   "CLEAR_CHAT_HISTORY": { "requestId": ["string", false] as const },
