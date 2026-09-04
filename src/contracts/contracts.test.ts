@@ -61,3 +61,29 @@ describe('contracts type guards', () => {
     expect(isGuestToHostEventName('')).toBe(false);
   });
 });
+
+describe('生成器：response 声明校验（生成期拦截）', () => {
+  it('response 指向原型链属性（toString）或不存在的事件时，生成失败', async () => {
+    const badSpec = {
+      name: 'ask-test',
+      version: 1,
+      hostToGuest: { OK_RESULT: { payload: {} } },
+      guestToHost: { BAD: { response: 'toString', payload: {} } },
+    };
+    const tmpSpec = '/tmp/ask-contracts-negative.json';
+    const tmpOut = '/tmp/ask-contracts-negative-out.ts';
+    await Bun.write(tmpSpec, JSON.stringify(badSpec));
+
+    const proc = Bun.spawn(['bun', 'scripts/generate-contracts.ts', tmpSpec, tmpOut], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const code = await proc.exited;
+    const errText = await new Response(proc.stderr).text();
+
+    // own-property 检查：'toString' 在原型链上，不得被误判为合法响应事件
+    expect(code).not.toBe(0);
+    expect(errText).toContain('BAD');
+    expect(errText).toContain('toString');
+  });
+});

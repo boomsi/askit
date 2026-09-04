@@ -85,9 +85,14 @@ export class EventHandler {
     }
 
     // 响应事件由契约配对表查得，宿主 registry 不再声明（配对唯一存在于契约）；
-    // requestId 是管道字段，handler 返回纯业务结果，分发时统一注入回传
+    // requestId 是管道字段，handler 返回纯业务结果，分发时统一注入回传。
+    // 入参 cast：运行时对象带 requestId（多一字段，结构兼容），泛型映射类型
+    // 间 TS 无法验证重叠，经 unknown 擦除（handler 侧只见业务字段）
     const responseEvent = EVENT_PAIRS[event];
-    const businessPayload = await handler(payload, tabId);
+    const businessPayload = await handler(
+      payload as unknown as GuestToHostBusinessPayloads[K],
+      tabId
+    );
     const responsePayload = { ...businessPayload, requestId: payload.requestId };
     engine.sendEvent(responseEvent, responsePayload);
     if (onLog) {

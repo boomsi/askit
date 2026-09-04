@@ -75,10 +75,10 @@ export type RequestEventName = keyof EventPairs;
  * guest 侧 ask.call 的入参、host 侧 handler 的返回值使用以下业务类型。
  */
 export type GuestToHostBusinessPayloads = {
-  "CLEAR_CHAT_HISTORY": {};
-  "CLOSE_EXTENSION": {};
-  "GET_APP_INFO": {};
-  "GET_LANGUAGE_LIST": {};
+  "CLEAR_CHAT_HISTORY": Record<string, never>;
+  "CLOSE_EXTENSION": Record<string, never>;
+  "GET_APP_INFO": Record<string, never>;
+  "GET_LANGUAGE_LIST": Record<string, never>;
   "HTTP_REQUEST": { "body"?: unknown; "headers"?: unknown; "method"?: string; "url": string; };
   "SEND_EMAIL": { "subject": string; "to": string; };
   "SET_APP_LANGUAGE": { "language": string; };

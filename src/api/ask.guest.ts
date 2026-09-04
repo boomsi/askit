@@ -58,15 +58,17 @@ function nextRequestId(requestEvent: string): string {
  */
 function ensureResponseDispatcher(responseEvent: string): void {
   if (dispatchedResponses.has(responseEvent)) return;
-  dispatchedResponses.add(responseEvent);
 
   const onHostEvent = bridge().__keel_onHostEvent;
   if (typeof onHostEvent !== 'function') {
+    // 不写入 dispatchedResponses：通道缺失时本次调用将超时，
+    // 但通道恢复后下一次 call 仍会重试订阅，而不是永久锁死
     console.warn(
       `[ask] 通道不可用：__keel_onHostEvent 未注入，${responseEvent} 的响应将无法接收（不在 keel 沙箱内？）`
     );
     return;
   }
+  dispatchedResponses.add(responseEvent);
 
   onHostEvent(responseEvent, (res) => {
     const payload = res as { requestId?: string };
@@ -82,7 +84,9 @@ function ensureResponseDispatcher(responseEvent: string): void {
     const outcome = res as { success?: unknown; error?: unknown };
     if (typeof outcome.success === 'boolean' && !outcome.success) {
       const detail = outcome.error === undefined ? '' : `: ${String(outcome.error)}`;
-      pending.reject(new Error(`[ask] ${pending.requestEvent} failed${detail}`));
+      // 结构化错误保留失败响应原文（HTTP 无 error 字段但带 status/data，
+      // 调用方可从 AskError.response 恢复状态码等上下文）
+      pending.reject(new AskError(`[ask] ${pending.requestEvent} failed${detail}`, res));
       return;
     }
 
@@ -94,11 +98,30 @@ function ensureResponseDispatcher(responseEvent: string): void {
 type CallOptions = { timeoutMs?: number };
 
 /**
- * call 参数的条件元组：payload 无必填字段时可整体省略（GET_APP_INFO 这类无参请求），
- * 有必填字段时（SET_APP_LANGUAGE 的 language）漏传直接编译报错。
+ * ask 失败错误：应用层失败（响应带 success:false）时 reject 的错误类型，
+ * response 保留失败响应原文（HTTP 的 status/data、业务失败的 error 等），
+ * 调用方可从中恢复上下文（如 HTTP 状态码）。
  */
-type CallArgs<P> =
-  Partial<P> extends P ? [payload?: P, options?: CallOptions] : [payload: P, options?: CallOptions];
+export class AskError extends Error {
+  readonly response: unknown;
+
+  constructor(message: string, response: unknown) {
+    super(message);
+    this.name = 'AskError';
+    this.response = response;
+  }
+}
+
+/**
+ * call 参数的条件元组：空业务载荷（Record<string, never>）或全可选字段时可整体省略
+ * （GET_APP_INFO 这类无参请求），有必填字段时（SET_APP_LANGUAGE 的 language）
+ * 漏传直接编译报错。
+ */
+type CallArgs<P> = [P] extends [Record<string, never>]
+  ? [payload?: P, options?: CallOptions]
+  : Partial<P> extends P
+    ? [payload?: P, options?: CallOptions]
+    : [payload: P, options?: CallOptions];
 
 /** send 的载荷元组：同上判定，全可选时可省略 */
 type OptionalPayload<P> = Partial<P> extends P ? [payload?: P] : [payload: P];

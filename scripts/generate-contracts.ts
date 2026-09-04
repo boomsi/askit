@@ -130,7 +130,9 @@ function renderPairedPayloadType(payload: unknown): string {
 
 function renderBusinessPayloadType(payload: unknown): string {
   const base = renderPayloadType(payload);
-  return base === 'unknown' || base === '{  }' ? '{}' : base;
+  // 精确空对象：Record<string, never> 拒绝任何非对象值与多余属性
+  // （TS 的 `{}` 弱类型会放行 123 / { foo: 1 } 等错误调用）
+  return base === 'unknown' || base === '{  }' ? 'Record<string, never>' : base;
 }
 
 function renderPairedPayloadSchema(payload: unknown): string {
@@ -207,7 +209,9 @@ function extractEventPairs(
   const pairs: Record<string, string> = {};
   for (const [name, spec] of Object.entries(guestToHost)) {
     if (!spec?.response) continue;
-    if (!(spec.response in hostToGuest)) {
+    // own-property 检查：in 会命中 Object.prototype（'toString' 等），
+    // 与 host 侧 isRegisteredEvent 的修复保持一致
+    if (!Object.hasOwn(hostToGuest, spec.response)) {
       throw new Error(
         `[generate-contracts] 事件 ${name} 声明的 response "${spec.response}" 不存在于 hostToGuest`
       );

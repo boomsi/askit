@@ -57,19 +57,32 @@ EventEmitter.on('host:ready', () => {
 
 ```typescript
 import { createEngineAdapter, components } from 'askit/core';
+import { EventHandler } from 'askit';
 import { Engine } from 'keel';
 
 // 创建并配置引擎
 const engine = new Engine();
 
-// 连接 askit 桥接
+// 连接 askit 桥
 const adapter = createEngineAdapter(engine);
 
-// 注册所有 askit 组件
+// 注册全部 askit 组件
 engine.register(components);
 
-// 加载并运行插件（支持 URL 或打包代码字符串）
+// 注册 RPC handler——缺了这一步，guest 的 ask.call（GET_APP_INFO、
+// HTTP_REQUEST 等）不会有任何响应，只会超时。handler 是纯函数，
+// 响应事件由契约 EVENT_PAIRS 在分发时查表。
+const unsubscribe = EventHandler.setup(engine, {
+  tabId: 'tab-1',
+  handlers: {
+    GET_APP_INFO: async () => ({ appName: 'demo', logo: '', languageContents: null, favoriteCount: 0, usedCount: 0, author: 'askit' }),
+  },
+});
+
+// 加载并运行 guest（支持 URL 或打包后的代码字符串）
 await engine.loadBundle('https://example.com/guest.js');
+
+// 卸载时：unsubscribe()
 ```
 
 ## 项目结构

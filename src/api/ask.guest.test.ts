@@ -14,7 +14,7 @@
 
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { EVENT_PAIRS, GUEST_TO_HOST_EVENT_NAMES, HOST_TO_GUEST_EVENT_NAMES } from '../contracts';
-import { ask } from './ask.guest';
+import { AskError, ask } from './ask.guest';
 import { http } from './Https.guest';
 
 type HostListener = (payload: unknown) => void;
@@ -106,6 +106,11 @@ describe('ask.call: 自动 requestId', () => {
     void ask.call('SET_APP_LANGUAGE');
     // @ts-expect-error send 的 payload 类型错
     ask.send('GUEST_SLEEP_STATE', { sleeping: 'yes' });
+    // 空业务载荷事件：非对象值 / 多余属性都必须拒绝（Record<string, never>）
+    // @ts-expect-error payload 不接受非对象值
+    void ask.call('GET_APP_INFO', 123);
+    // @ts-expect-error payload 不接受多余属性
+    void ask.call('GET_APP_INFO', { foo: 1 });
   });
 });
 
@@ -213,6 +218,25 @@ describe('ask.call: 超时与通道缺失', () => {
     await new Promise((r) => setTimeout(r, 10));
   });
 
+  it('dispatcher 订阅失败不锁死：通道恢复后下一次 call 重新订阅', async () => {
+    const onHostEvent = g.__keel_onHostEvent;
+    delete g.__keel_onHostEvent;
+    try {
+      // 通道缺失：请求仍会发出（emit 通道独立），但响应无人回发，本次按超时失败
+      const first = ask.call('CLOSE_EXTENSION', undefined, { timeoutMs: 50 });
+      await first.catch(() => {});
+    } finally {
+      // finally 恢复：用例任何路径（含超时中断）都不能把通道泄漏给后续用例
+      g.__keel_onHostEvent = onHostEvent;
+    }
+
+    // 通道恢复：同响应事件再次 call，应重新订阅并完成请求-响应往返
+    const pending = ask.call('CLOSE_EXTENSION');
+    const { requestId } = lastSent().payload;
+    emitHostEvent('CLOSE_EXTENSION_RESULT', { requestId, success: true });
+    await expect(pending).resolves.toMatchObject({ success: true });
+  });
+
   it('通道缺失时（不在 keel 沙箱内）立即 reject', async () => {
     const emit = g.__keel_emitEvent;
     delete g.__keel_emitEvent;
@@ -316,17 +340,27 @@ describe('http: 基于 ask.call 的特化层', () => {
     await expect(pending).resolves.toMatchObject({ status: 201 });
   });
 
-  it('HTTP 失败（success:false）走 reject', async () => {
+  it('HTTP 失败（success:false）走 reject，且 AskError.response 保留 status/data', async () => {
     const pending = http.get('https://api.example.com/404');
 
     const { requestId } = lastSent().payload;
-    emitHostEvent('HTTP_RESPONSE', { requestId, success: false, status: 404, data: null });
-
-    let message = '';
-    await pending.catch((err: Error) => {
-      message = err instanceof Error ? err.message : String(err);
+    emitHostEvent('HTTP_RESPONSE', {
+      requestId,
+      success: false,
+      status: 404,
+      data: { message: 'Not Found' },
     });
-    expect(message).toContain('failed');
+
+    let caught: unknown;
+    await pending.catch((err: unknown) => {
+      caught = err;
+    });
+    expect(caught instanceof AskError).toBe(true);
+    const err = caught as AskError;
+    expect(err.message).toContain('failed');
+    // HTTP_RESPONSE 契约无 error 字段：状态码与响应体从 response 原文恢复
+    expect((err.response as { status?: number }).status).toBe(404);
+    expect((err.response as { data?: unknown }).data).toEqual({ message: 'Not Found' });
   });
 });
 
