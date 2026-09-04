@@ -118,6 +118,26 @@ Host App Startup
 
 ### 2. Message Routing
 
+Host handlers are plain functions in a `HandlerRegistry`; the response event is
+resolved from the contract `EVENT_PAIRS` at dispatch time (the pair is declared
+once in the contract JSON — hosts never repeat it):
+
+```typescript
+// Host side: register a handler (response event auto-resolved)
+EventHandler.setup(engine, {
+  tabId,
+  handlers: {
+    GET_APP_INFO: async (payload) => ({
+      requestId: payload.requestId,
+      appName: 'demo',
+      /* ... */
+    }),
+  },
+});
+```
+
+Guest side simply calls `ask.call('GET_APP_INFO')` — see [API Reference](./api-reference.md).
+
 When Guest calls askit APIs, messages are routed through multiple layers:
 
 ```

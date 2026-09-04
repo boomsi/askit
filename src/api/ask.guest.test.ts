@@ -95,6 +95,18 @@ describe('ask.call: 自动 requestId', () => {
     expect(sent.payload.method).toBe('GET');
     expect(sent.payload.requestId).toMatch(/^HTTP_REQUEST-\d+$/);
   });
+
+  it('类型保护（编译期，@ts-expect-error 若类型退化会在 typecheck 暴露）', () => {
+    // 事件名不在契约配对表内
+    // @ts-expect-error 不存在的事件名
+    void ask.call('GET_APP_INF');
+    // @ts-expect-error language 必须是 string
+    void ask.call('SET_APP_LANGUAGE', { language: 123 });
+    // @ts-expect-error 有必填字段的事件不能省略 payload
+    void ask.call('SET_APP_LANGUAGE');
+    // @ts-expect-error send 的 payload 类型错
+    ask.send('GUEST_SLEEP_STATE', { sleeping: 'yes' });
+  });
 });
 
 describe('ask.call: 请求-响应关联', () => {

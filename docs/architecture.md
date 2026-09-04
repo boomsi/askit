@@ -57,6 +57,22 @@ The `package.json` uses conditional exports to serve different TypeScript source
 
 ## Message Flow
 
+### Contract-locked request-response pairs
+
+The contracts JSON (`specs/contracts/ask.contracts.v1.json`) declares each
+request event's `response`, from which `EVENT_PAIRS` (runtime const + type) is
+generated. Both ends resolve the pair from this single source:
+
+- guest: `ask.call(request)` looks up the response event — no pairing knowledge
+  in application code
+- host: `EventHandler` dispatch looks up `responseEvent` — `HandlerRegistry`
+  entries are plain business functions
+
+`ask` (call/send/on) talks over keel's injected `__keel_emitEvent` /
+`__keel_onHostEvent` globals (same channel as keel sdk's `useSendToHost` /
+`useHostEvent`); requestIds are auto-generated per sandbox and responses are
+routed back through the originating engine, so ids never collide across guests.
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                        HOST APP                                   │

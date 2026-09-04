@@ -22,6 +22,21 @@ bun add github:GoAskAway/askit
 
 ### 插件开发
 
+#### 与宿主通信
+
+```typescript
+import { ask, http } from 'askit';
+
+// RPC：requestId 自动生成，响应类型来自契约
+const appInfo = await ask.call('GET_APP_INFO');
+
+// 单向通知
+ask.send('GUEST_SLEEP_STATE', { sleeping: true });
+
+// 经宿主代理的 HTTP
+const res = await http.get<{ code: number }>('https://api.example.com');
+```
+
 在插件代码中，直接导入并使用 API：
 
 ```typescript

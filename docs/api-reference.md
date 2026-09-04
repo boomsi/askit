@@ -1,5 +1,65 @@
 # API Reference
 
+## ask (Guest)
+
+Unified entry for guest ↔ host communication (module-level singleton). Three
+primitives map to the three communication semantics of the contracts:
+
+| Contract shape | Semantics | API |
+| --- | --- | --- |
+| `guestToHost` + `response` | request-response (RPC) | `ask.call` |
+| `guestToHost` without `response` | one-way notification | `ask.send` |
+| `hostToGuest` | host push | `ask.on` |
+
+### ask.call(request, payload?, options?)
+
+```typescript
+import { ask } from 'askit';
+
+const info = await ask.call('GET_APP_INFO');                    // no payload needed
+await ask.call('SET_APP_LANGUAGE', { language: 'en' });         // typed payload
+await ask.call('GET_APP_INFO', undefined, { timeoutMs: 3000 }); // custom timeout
+```
+
+- Event names, payload and return types are all derived from the generated
+  contracts — wrong event name / wrong payload type / missing required field
+  are compile errors.
+- `requestId` is auto-generated per sandbox (callers never pass it).
+- Rejects on timeout (default 10s) and on `success: false` responses
+  (error detail included) — always `.catch`.
+
+### ask.send(event, payload?)
+
+```typescript
+ask.send('GUEST_SLEEP_STATE', { sleeping: true, reason: 'hidden' });
+```
+
+One-way notification, no response expected.
+
+### ask.on(event, listener)
+
+```typescript
+const off = ask.on('HOST_VISIBILITY', ({ visible }) => {
+  // payload typed per contract
+});
+off(); // unsubscribe
+```
+
+## http (Guest)
+
+HTTP specialization built on `ask.call('HTTP_REQUEST')`. `requestId`,
+timeout and failure semantics are inherited from `ask.call`.
+
+### http.get\<D\>(url, headers?)
+
+### http.post\<D\>(url, body?, headers?)
+
+```typescript
+const res = await http.get<{ code: number }>('https://api.example.com');
+res.status;  // number
+res.data;    // D (typed by the generic)
+```
+
 ## EventEmitter
 
 The EventEmitter API provides event-based communication between Host and Guest.

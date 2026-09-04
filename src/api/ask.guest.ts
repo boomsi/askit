@@ -88,7 +88,17 @@ function ensureResponseDispatcher(responseEvent: string): void {
   });
 }
 
-/** 全可选判定：payload 无必填字段时（Partial<P> 与 P 结构等价）可整体省略 */
+/** call 的可选配置 */
+type CallOptions = { timeoutMs?: number };
+
+/**
+ * call 参数的条件元组：payload 无必填字段时可整体省略（GET_APP_INFO 这类无参请求），
+ * 有必填字段时（SET_APP_LANGUAGE 的 language）漏传直接编译报错。
+ */
+type CallArgs<P> =
+  Partial<P> extends P ? [payload?: P, options?: CallOptions] : [payload: P, options?: CallOptions];
+
+/** send 的载荷元组：同上判定，全可选时可省略 */
 type OptionalPayload<P> = Partial<P> extends P ? [payload?: P] : [payload: P];
 
 export const ask = {
@@ -96,14 +106,15 @@ export const ask = {
    * 调用宿主能力并等待响应
    *
    * @param request 契约中的请求事件名（响应事件由 EventPairs 查表，无需声明）
-   * @param payload 业务载荷（不含 requestId，由本方法自动生成并注入）
-   * @param options.timeoutMs 超时毫秒数，默认 10 秒
+   * @param args.payload 业务载荷（不含 requestId，由本方法自动生成并注入；
+   *   无必填字段时可省略，有必填字段时漏传编译报错）
+   * @param args.options.timeoutMs 超时毫秒数，默认 10 秒
    */
   call<K extends keyof EventPairs>(
     request: K,
-    payload?: Omit<GuestToHostEventPayloads[K], 'requestId'>,
-    options?: { timeoutMs?: number }
+    ...args: CallArgs<Omit<GuestToHostEventPayloads[K], 'requestId'>>
   ): Promise<HostToGuestEventPayloads[EventPairs[K]]> {
+    const [payload, options] = args;
     const responseEvent = EVENT_PAIRS[request];
     const requestId = nextRequestId(String(request));
     const key = `${String(responseEvent)}:${requestId}`;

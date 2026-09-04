@@ -197,3 +197,15 @@ EventEmitter.on('*', (payload) => {
 1. Forget to clean up listeners
 2. Leave high-frequency events unlimited
 3. Ignore memory leak warnings
+
+## Always Catch `ask.call` Rejections
+
+`ask.call` rejects on both timeout (default 10s) and business failure
+(`success: false` responses carry the error detail). An un-caught rejection
+silently disappears in the sandbox — attach a `.catch` at every call site:
+
+```typescript
+ask.call('SET_APP_LANGUAGE', { language: 'en' }).catch((err) => {
+  console.error('language switch failed:', err.message);
+});
+```

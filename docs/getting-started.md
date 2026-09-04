@@ -22,6 +22,21 @@ bun add github:GoAskAway/askit
 
 ### For Guest Development
 
+#### Talking to the Host
+
+```typescript
+import { ask, http } from 'askit';
+
+// RPC: requestId auto-generated, response typed from contracts
+const appInfo = await ask.call('GET_APP_INFO');
+
+// One-way notification
+ask.send('GUEST_SLEEP_STATE', { sleeping: true });
+
+// HTTP via host proxy
+const res = await http.get<{ code: number }>('https://api.example.com');
+```
+
 In your guest code, simply import and use the APIs:
 
 ```typescript

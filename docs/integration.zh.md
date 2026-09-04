@@ -117,6 +117,25 @@ Host App 启动
 
 ### 2. 消息路由
 
+宿主 handler 是 `HandlerRegistry` 中的纯函数；响应事件在分发时由契约
+`EVENT_PAIRS` 查表得出（配对只在契约 JSON 声明一次，宿主不再重复声明）：
+
+```typescript
+// Host 侧：注册 handler（响应事件自动查表）
+EventHandler.setup(engine, {
+  tabId,
+  handlers: {
+    GET_APP_INFO: async (payload) => ({
+      requestId: payload.requestId,
+      appName: 'demo',
+      /* ... */
+    }),
+  },
+});
+```
+
+Guest 侧只需 `ask.call('GET_APP_INFO')`，详见 [API 参考](./api-reference.zh.md)。
+
 当 Guest 调用 askit API 时，消息通过多个层级路由：
 
 ```

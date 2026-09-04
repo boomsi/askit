@@ -1,5 +1,63 @@
 # API 参考
 
+## ask（Guest）
+
+Guest ↔ Host 通信统一入口（模块级单例）。三个原语对应契约的三类通信语义：
+
+| 契约形态 | 语义 | API |
+| --- | --- | --- |
+| `guestToHost` + `response` | 请求-响应（RPC） | `ask.call` |
+| `guestToHost` 无 `response` | 单向通知 | `ask.send` |
+| `hostToGuest` | 宿主推送 | `ask.on` |
+
+### ask.call(request, payload?, options?)
+
+```typescript
+import { ask } from 'askit';
+
+const info = await ask.call('GET_APP_INFO');                    // 无参请求
+await ask.call('SET_APP_LANGUAGE', { language: 'en' });         // 类型化参数
+await ask.call('GET_APP_INFO', undefined, { timeoutMs: 3000 }); // 自定义超时
+```
+
+- 事件名、payload 与返回类型全部来自生成契约——事件名写错 / 参数类型错 /
+  漏传必填字段都是编译错误
+- `requestId` 由沙箱内自动生成（调用方不传）
+- 超时（默认 10s）与 `success: false` 响应都会 reject（带 error 详情），
+  记得 `.catch`
+
+### ask.send(event, payload?)
+
+```typescript
+ask.send('GUEST_SLEEP_STATE', { sleeping: true, reason: 'hidden' });
+```
+
+单向通知，无响应。
+
+### ask.on(event, listener)
+
+```typescript
+const off = ask.on('HOST_VISIBILITY', ({ visible }) => {
+  // 回调参数按契约类型化
+});
+off(); // 取消订阅
+```
+
+## http（Guest）
+
+构建在 `ask.call('HTTP_REQUEST')` 之上的 HTTP 特化层，requestId、超时与
+失败语义全部继承自 `ask.call`。
+
+### http.get\<D\>(url, headers?)
+
+### http.post\<D\>(url, body?, headers?)
+
+```typescript
+const res = await http.get<{ code: number }>('https://api.example.com');
+res.status;  // number
+res.data;    // D（由泛型指定）
+```
+
 ## EventEmitter
 
 EventEmitter API 提供 Host 与 Guest 之间基于事件的通信。
