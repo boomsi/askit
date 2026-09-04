@@ -92,7 +92,8 @@ function ensureResponseDispatcher(responseEvent: string): void {
 
     // 边界拆分：requestId 是管道字段，resolve 前移除，业务层拿到的
     // 就是纯业务载荷（展开/序列化/深比较均不会暴露隐藏字段）
-    const { requestId: _pipe, ...business } = res as Record<string, unknown>;
+    const business = { ...(res as Record<string, unknown>) };
+    delete business.requestId;
     pending.resolve(business);
   });
 }
@@ -134,7 +135,7 @@ export const ask = {
    * 调用宿主能力并等待响应
    *
    * @param request 契约中的请求事件名（响应事件由 EventPairs 查表，无需声明）
-   * @param args.payload 业务载荷（requestId 由本方法自动生成并注入，类型不含它；
+   * @param args.payload 业务载荷（requestId 由本方法自动生成并注入，类型与运行时均不含它；
    *   无必填字段时可省略，有必填字段时漏传编译报错）
    * @param args.options.timeoutMs 超时毫秒数，默认 10 秒
    */

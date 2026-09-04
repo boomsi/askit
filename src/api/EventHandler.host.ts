@@ -73,7 +73,7 @@ export class EventHandler {
   private static async handleKnownEvent<K extends keyof EventPairs>(
     engine: Engine,
     event: K,
-    payload: GuestToHostEventPayloads[K], // 完整线上载荷（含 requestId），handler 入参收窄为业务字段
+    payload: GuestToHostEventPayloads[K], // 完整线上载荷（含 requestId），拆分后业务对象才传给 handler
     tabId: string,
     onLog: MessageLogHandler | undefined,
     customHandlers: HandlerRegistry | undefined
@@ -126,8 +126,9 @@ export class EventHandler {
       }
 
       try {
-        // isRegisteredEvent 把 event 收窄为 keyof GuestToHostEventPayloads；
-        // engine.on 的 payload 是 unknown，cast 到对应 K 的 payload 类型是运行时唯一的类型擦除点。
+        // isRegisteredEvent 把 event 收窄为 keyof EventPairs；
+        // engine.on 的 payload 是 unknown，cast 到对应 K 的完整载荷类型是
+        // 运行时唯一的类型擦除点（requestId 在 handleKnownEvent 内拆分）。
         await EventHandler.handleKnownEvent(
           engine,
           event,
