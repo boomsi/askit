@@ -50,26 +50,32 @@ describe('EventHandler.host', () => {
     expect(mock.sent).toHaveLength(0);
   });
 
-  it('customHandler 覆盖默认 GET_APP_INFO', async () => {
+  it('customHandler 覆盖默认 GET_APP_INFO，且 handler 入参不含 requestId', async () => {
     const mock = createMockEngine();
+    const received: unknown[] = [];
     EventHandler.setup(mock.engine as never, {
       tabId: 't1',
       handlers: {
-        GET_APP_INFO: async () => ({
-          requestId: 'r1',
-          appName: 'Custom',
-          logo: '',
-          languageContents: null,
-          favoriteCount: 0,
-          usedCount: 0,
-          author: '',
-        }),
+        GET_APP_INFO: async (payload) => {
+          received.push(payload);
+          return {
+            appName: 'Custom',
+            logo: '',
+            languageContents: null,
+            favoriteCount: 0,
+            usedCount: 0,
+            author: '',
+          };
+        },
       },
     });
     await mock.msg!({ event: 'GET_APP_INFO', payload: { requestId: 'r1' } });
     expect(mock.sent).toHaveLength(1);
-    const sent = mock.sent[0] as { payload: { appName: string } };
+    const sent = mock.sent[0] as { payload: { appName: string; requestId: string } };
     expect(sent.payload.appName).toBe('Custom');
+    // 边界拆分：requestId 由分发层提取，handler 入参运行时不含它；响应由分发层回传
+    expect(received[0]).not.toHaveProperty('requestId');
+    expect(sent.payload.requestId).toBe('r1');
   });
 
   it('无 tabId 时 setup 返回 no-op', () => {

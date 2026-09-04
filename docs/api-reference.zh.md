@@ -26,6 +26,23 @@ await ask.call('GET_APP_INFO', undefined, { timeoutMs: 3000 }); // 自定义超�
 - 超时（默认 10s）与 `success: false` 响应都会 reject（带 error 详情），
   记得 `.catch`
 
+### AskError
+
+`success: false` 响应 reject 的是 `AskError`（从包根导出），其 `response`
+字段保留失败响应原文——HTTP 的状态码与响应体从这里恢复：
+
+```typescript
+import { AskError, http } from 'askit';
+
+try {
+  await http.get('/api/x');
+} catch (err) {
+  if (err instanceof AskError) {
+    const status = (err.response as { status?: number }).status; // 如 404
+  }
+}
+```
+
 ### ask.send(event, payload?)
 
 ```typescript

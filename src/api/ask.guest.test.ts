@@ -14,7 +14,7 @@
 
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { EVENT_PAIRS, GUEST_TO_HOST_EVENT_NAMES, HOST_TO_GUEST_EVENT_NAMES } from '../contracts';
-import { AskError, ask } from './ask.guest';
+import { AskError, ask } from '../index.guest'; // 公开入口导入：防止内部路径掩盖导出缺口
 import { http } from './Https.guest';
 
 type HostListener = (payload: unknown) => void;
@@ -121,9 +121,10 @@ describe('ask.call: 请求-响应关联', () => {
     const { requestId } = lastSent().payload;
     emitHostEvent('SEND_APP_INFO', { requestId, appName: 'demo' });
 
-    const res = (await pending) as { appName?: string; requestId?: string };
+    const res = (await pending) as { appName?: string };
     expect(res.appName).toBe('demo');
-    expect(res.requestId).toBe(requestId);
+    // 边界拆分：requestId 是管道字段，resolve 值运行时不含它
+    expect(res).not.toHaveProperty('requestId');
   });
 
   it('响应 requestId 不匹配时保持 pending（不误吞其他请求的响应）', async () => {
@@ -180,7 +181,7 @@ describe('ask.call: 应用层错误（success:false）', () => {
     const { requestId } = lastSent().payload;
     emitHostEvent('SET_APP_LANGUAGE_RESULT', { requestId, success: true });
 
-    await expect(pending).resolves.toEqual({ requestId, success: true });
+    await expect(pending).resolves.toEqual({ success: true });
   });
 
   it('无 success 字段的数据型响应不受影响，正常 resolve', async () => {
@@ -190,7 +191,6 @@ describe('ask.call: 应用层错误（success:false）', () => {
     emitHostEvent('LANGUAGE_LIST', { requestId, current: 'zh-Hans', languages: ['zh-Hans'] });
 
     await expect(pending).resolves.toEqual({
-      requestId,
       current: 'zh-Hans',
       languages: ['zh-Hans'],
     });

@@ -28,6 +28,24 @@ await ask.call('GET_APP_INFO', undefined, { timeoutMs: 3000 }); // custom timeou
 - Rejects on timeout (default 10s) and on `success: false` responses
   (error detail included) — always `.catch`.
 
+### AskError
+
+`success: false` responses reject with an `AskError` (exported from the package
+root), whose `response` field keeps the original failure payload — recover
+HTTP status/body from there:
+
+```typescript
+import { AskError, http } from 'askit';
+
+try {
+  await http.get('/api/x');
+} catch (err) {
+  if (err instanceof AskError) {
+    const status = (err.response as { status?: number }).status; // e.g. 404
+  }
+}
+```
+
 ### ask.send(event, payload?)
 
 ```typescript

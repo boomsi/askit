@@ -97,6 +97,7 @@ export function App() {
 ```typescript
 // 导入核心模块用于桥接
 import { createEngineAdapter, components } from 'askit/core';
+import { EventHandler } from 'askit';
 import { Engine } from 'keel';
 
 // 创建引擎并连接 askit
@@ -106,8 +107,19 @@ const adapter = createEngineAdapter(engine);
 // 注册组件以渲染插件 UI
 engine.register(components);
 
+// 注册 RPC handler——缺了这一步，guest 的 ask.call 只会超时。
+// handler 是纯函数，响应事件由契约 EVENT_PAIRS 在分发时查表。
+const unsubscribe = EventHandler.setup(engine, {
+  tabId: 'tab-1',
+  handlers: {
+    GET_APP_INFO: async () => ({ appName: 'demo', logo: '', languageContents: null, favoriteCount: 0, usedCount: 0, author: 'askit' }),
+  },
+});
+
 // 启动插件（支持 URL 或打包代码字符串）
 await engine.loadBundle('https://example.com/guest.js');
+
+// 卸载时：unsubscribe()
 ```
 
 ## askit 是什么？

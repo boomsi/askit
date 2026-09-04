@@ -97,6 +97,7 @@ export function App() {
 ```typescript
 // Import core module for bridging
 import { createEngineAdapter, components } from 'askit/core';
+import { EventHandler } from 'askit';
 import { Engine } from 'keel';
 
 // Create engine and connect askit
@@ -106,8 +107,20 @@ const adapter = createEngineAdapter(engine);
 // Register components for rendering guest UI
 engine.register(components);
 
+// Register RPC handlers — without this, ask.call from the guest
+// only times out. Handlers are plain functions; the response event
+// is resolved from the contract EVENT_PAIRS at dispatch time.
+const unsubscribe = EventHandler.setup(engine, {
+  tabId: 'tab-1',
+  handlers: {
+    GET_APP_INFO: async () => ({ appName: 'demo', logo: '', languageContents: null, favoriteCount: 0, usedCount: 0, author: 'askit' }),
+  },
+});
+
 // Start guest (supports URL or bundled code string)
 await engine.loadBundle('https://example.com/guest.js');
+
+// On teardown: unsubscribe()
 ```
 
 ## What is askit?

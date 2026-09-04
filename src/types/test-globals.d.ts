@@ -46,6 +46,7 @@ declare module 'bun:test' {
     toMatch(pattern: RegExp | string): void;
     toBeLessThanOrEqual(n: number): void;
     toBeGreaterThanOrEqual(n: number): void;
+    toHaveProperty(key: string): void;
     toThrow(expected?: unknown): void;
     resolves: {
       toEqual(expected: unknown): void;
@@ -56,6 +57,7 @@ declare module 'bun:test' {
       toEqual(expected: unknown): void;
       toBeNull(): void;
       toContain(expected: unknown): void;
+      toHaveProperty(key: string): void;
       toThrow(): void;
     };
   };
@@ -83,6 +85,7 @@ declare function expect(actual: unknown): {
     toBeNull(): void;
     toContain(s: string): void;
     toContainEqual(expected: unknown): void;
+    toHaveProperty(key: string): void;
   };
   [key: string]: (...args: unknown[]) => void;
 };

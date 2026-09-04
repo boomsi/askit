@@ -90,7 +90,10 @@ function ensureResponseDispatcher(responseEvent: string): void {
       return;
     }
 
-    pending.resolve(res);
+    // 边界拆分：requestId 是管道字段，resolve 前移除，业务层拿到的
+    // 就是纯业务载荷（展开/序列化/深比较均不会暴露隐藏字段）
+    const { requestId: _pipe, ...business } = res as Record<string, unknown>;
+    pending.resolve(business);
   });
 }
 
