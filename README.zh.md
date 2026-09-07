@@ -15,7 +15,7 @@
 
 **核心机制：**
 - **UI 组件**：Guest 端是字符串 `"StepList"`，Host 端是完整的 RN 实现
-- **API**：Guest 端通过 `global.__sendEventToHost('ASKIT_TOAST_SHOW', {...})` 发命令，Host 端的 bridge 路由到真实的 ToastAndroid 等原生 API
+- **API**：Guest 端通过 `ask` 调用宿主能力（基于 keel 的 `__keel_emitEvent`/`__keel_onHostEvent` 通道的类型化 RPC），请求-响应对由生成契约（`EVENT_PAIRS`）锁定
 
 ## 架构
 
@@ -68,20 +68,23 @@ bun add github:GoAskAway/askit
 ### 在 Guest 中 (QuickJS Sandbox)
 
 ```typescript
-import { EventEmitter, Toast, Haptic } from 'askit';
+import { ask, http } from 'askit';
 import { StepList, UserAvatar } from 'askit';
 
-// 事件通信
-EventEmitter.emit('guest:ready', { version: '1.0.0' });
-EventEmitter.on('host:config', (config) => {
-  console.log('收到配置:', config);
-});
+// RPC：调用宿主能力（requestId 自动生成，响应事件由契约 EVENT_PAIRS 查表；
+// 超时与 success:false 都会走 reject）
+const appInfo = await ask.call('GET_APP_INFO');
+await ask.call('SET_APP_LANGUAGE', { language: 'en' });
 
-// Toast 通知
-Toast.show('来自插件的问候!', { duration: 'short', position: 'bottom' });
+// 单向通知宿主
+ask.send('GUEST_SLEEP_STATE', { sleeping: true });
 
-// 触觉反馈
-Haptic.trigger('light');
+// 订阅宿主推送（返回取消订阅函数）
+const off = ask.on('HOST_VISIBILITY', ({ visible }) => {});
+off();
+
+// 经宿主代理的 HTTP
+const res = await http.get<{ code: number }>('https://api.example.com');
 
 // UI 组件（Guest 侧写 JSX；Host 侧注册同名组件实现）
 export function App() {
@@ -94,6 +97,7 @@ export function App() {
 ```typescript
 // 导入核心模块用于桥接
 import { createEngineAdapter, components } from 'askit/core';
+import { EventHandler } from 'askit';
 import { Engine } from 'keel';
 
 // 创建引擎并连接 askit
@@ -103,8 +107,19 @@ const adapter = createEngineAdapter(engine);
 // 注册组件以渲染插件 UI
 engine.register(components);
 
+// 注册 RPC handler——缺了这一步，guest 的 ask.call 只会超时。
+// handler 是纯函数，响应事件由契约 EVENT_PAIRS 在分发时查表。
+const unsubscribe = EventHandler.setup(engine, {
+  tabId: 'tab-1',
+  handlers: {
+    GET_APP_INFO: async () => ({ appName: 'demo', logo: '', languageContents: null, favoriteCount: 0, usedCount: 0, author: 'askit' }),
+  },
+});
+
 // 启动插件（支持 URL 或打包代码字符串）
 await engine.loadBundle('https://example.com/guest.js');
+
+// 卸载时：unsubscribe()
 ```
 
 ## askit 是什么？
@@ -124,7 +139,7 @@ await engine.loadBundle('https://example.com/guest.js');
 
 ### 消息模型（对齐 keel）
 
-- **Guest → Host**：`global.__sendEventToHost(eventName, payload)`
+- **Guest → Host**：`ask.call / ask.send`（底层 `__keel_emitEvent` 通道，契约类型化）
   - `ASKIT_*` 为 askit 模块使用的保留内部命令事件：
     - `ASKIT_TOAST_SHOW` payload `{ message, options }`
     - `ASKIT_HAPTIC_TRIGGER` payload `{ type }`

@@ -57,6 +57,21 @@ Toast.show('Hello!');
 
 ## 消息流
 
+### 契约锁定的请求-响应对
+
+契约 JSON（`specs/contracts/ask.contracts.v1.json`）为每个请求事件声明
+`response`，生成 `EVENT_PAIRS`（运行时常量 + 类型）。两端都从这单一来源
+解析配对：
+
+- guest：`ask.call(request)` 查表得响应事件——应用代码不感知配对
+- host：`EventHandler` 分发查表得 `responseEvent`——`HandlerRegistry`
+  条目即纯业务函数
+
+`ask`（call/send/on）走 keel 注入的 `__keel_emitEvent` /
+`__keel_onHostEvent` 全局（与 keel sdk 的 `useSendToHost` / `useHostEvent`
+同通道）；requestId 按沙箱自动生成，响应沿发起请求的 engine 定向回发，
+跨 guest 天然不串台。
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                        HOST APP                                   │

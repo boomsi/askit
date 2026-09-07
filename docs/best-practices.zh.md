@@ -197,3 +197,15 @@ EventEmitter.on('*', (payload) => {
 1. 忘记清理监听器
 2. 高频事件不做限流
 3. 忽略内存泄漏警告
+
+## 永远接住 `ask.call` 的 reject
+
+`ask.call` 在超时（默认 10s）与业务失败（`success: false` 响应带 error
+详情）两种情况下都会 reject。未接住的 rejection 在沙箱里会静默丢失——
+每个调用点都应 `.catch`：
+
+```typescript
+ask.call('SET_APP_LANGUAGE', { language: 'en' }).catch((err) => {
+  console.error('切换语言失败:', err.message);
+});
+```

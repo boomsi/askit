@@ -18,6 +18,8 @@ type FieldType =
 
 type ContractsEventSpec = {
   summary?: string;
+  /** 请求-响应配对：声明本请求事件对应的 hostToGuest 响应事件名 */
+  response?: string;
   payload?: NestedPayload;
 };
 
@@ -112,20 +114,116 @@ function renderPayloadSchema(payload: unknown): string {
   return `{ ${fields.join(', ')} }`;
 }
 
-function renderPayloadMap(
+/**
+ * requestId 是协议管道字段，不写在契约 payload 中（业务归业务）。
+ * 对参与请求-响应配对的事件（请求方与被指向的响应方），生成时统一注入：
+ * 类型层拼入 `{ requestId: string }`，运行时 schema 注入 required 校验项。
+ */
+const PIPE_REQUEST_ID_TYPE = '"requestId": string;';
+const PIPE_REQUEST_ID_SCHEMA = '"requestId": ["string", false] as const,';
+
+function renderPairedPayloadType(payload: unknown): string {
+  const base = renderPayloadType(payload);
+  if (base === 'unknown' || base === '{  }') return `{ ${PIPE_REQUEST_ID_TYPE} }`;
+  return base.replace(/\}\s*$/, ` ${PIPE_REQUEST_ID_TYPE} }`);
+}
+
+function renderBusinessPayloadType(payload: unknown): string {
+  const base = renderPayloadType(payload);
+  // 精确空对象：Record<string, never> 拒绝任何非对象值与多余属性
+  // （TS 的 `{}` 弱类型会放行 123 / { foo: 1 } 等错误调用）
+  return base === 'unknown' || base === '{  }' ? 'Record<string, never>' : base;
+}
+
+function renderPairedPayloadSchema(payload: unknown): string {
+  const base = renderPayloadSchema(payload);
+  // 空业务载荷：payload 缺省返回 '{}'，payload 为空对象返回 '{  }'
+  if (base === '{}' || base === '{  }') return `{ ${PIPE_REQUEST_ID_SCHEMA} }`;
+  return base.replace(/\}\s*$/, `, ${PIPE_REQUEST_ID_SCHEMA} }`);
+}
+
+/** 按事件的配对身份渲染完整（线上）payload 类型：配对事件注入 requestId，其余原样 */
+function renderFullPayloadMap(
   events: Record<string, ContractsEventSpec>,
-  render: (payload: unknown) => string
+  pairedNames: Set<string>
 ): string {
   const names = Object.keys(events).sort();
-  const lines = names.map((name) => `  ${JSON.stringify(name)}: ${render(events[name]?.payload)};`);
+  const lines = names.map((name) => {
+    const payload = events[name]?.payload;
+    const rendered = pairedNames.has(name)
+      ? renderPairedPayloadType(payload)
+      : renderPayloadType(payload);
+    return `  ${JSON.stringify(name)}: ${rendered};`;
+  });
   return `{\n${lines.join('\n')}\n}`;
 }
 
-function renderPayloadSchemaMap(events: Record<string, ContractsEventSpec>): string {
-  const names = Object.keys(events).sort();
+/** 仅配对事件的业务 payload（不含 requestId），供 ask.call 参数 / host handler 返回 */
+function renderBusinessPayloadMap(
+  events: Record<string, ContractsEventSpec>,
+  pairedNames: Set<string>
+): string {
+  const names = Object.keys(events)
+    .filter((n) => pairedNames.has(n))
+    .sort();
   const lines = names.map(
-    (name) => `  ${JSON.stringify(name)}: ${renderPayloadSchema(events[name]?.payload)},`
+    (name) => `  ${JSON.stringify(name)}: ${renderBusinessPayloadType(events[name]?.payload)};`
   );
+  return `{\n${lines.join('\n')}\n}`;
+}
+
+/** 运行时 schema：校验的是线上完整消息，配对事件注入 requestId required 项 */
+function renderFullPayloadSchemaMap(
+  events: Record<string, ContractsEventSpec>,
+  pairedNames: Set<string>
+): string {
+  const names = Object.keys(events).sort();
+  const lines = names.map((name) => {
+    const payload = events[name]?.payload;
+    const rendered = pairedNames.has(name)
+      ? renderPairedPayloadSchema(payload)
+      : renderPayloadSchema(payload);
+    return `  ${JSON.stringify(name)}: ${rendered},`;
+  });
+  return `{\n${lines.join('\n')}\n} as const`;
+}
+
+/**
+ * 过滤分组注释 key（"// --- xxx ---"）：分组信息只服务于 JSON 阅读，
+ * 不应进入生成的事件名类型与运行时校验列表。
+ */
+function filterCommentEntries(
+  events: Record<string, ContractsEventSpec>
+): Record<string, ContractsEventSpec> {
+  return Object.fromEntries(Object.entries(events).filter(([key]) => !key.startsWith('//')));
+}
+
+/**
+ * 提取请求-响应配对表，并校验 response 指向的事件确实存在于 hostToGuest。
+ * 配对错误在生成期直接失败，而不是留到运行时。
+ */
+function extractEventPairs(
+  guestToHost: Record<string, ContractsEventSpec>,
+  hostToGuest: Record<string, ContractsEventSpec>
+): Record<string, string> {
+  const pairs: Record<string, string> = {};
+  for (const [name, spec] of Object.entries(guestToHost)) {
+    if (!spec?.response) continue;
+    // own-property 检查：in 会命中 Object.prototype（'toString' 等），
+    // 与 host 侧 isRegisteredEvent 的修复保持一致
+    if (!Object.hasOwn(hostToGuest, spec.response)) {
+      throw new Error(
+        `[generate-contracts] 事件 ${name} 声明的 response "${spec.response}" 不存在于 hostToGuest`
+      );
+    }
+    pairs[name] = spec.response;
+  }
+  return pairs;
+}
+
+function renderEventPairs(pairs: Record<string, string>): string {
+  const names = Object.keys(pairs).sort();
+  const lines = names.map((name) => `  ${JSON.stringify(name)}: ${JSON.stringify(pairs[name])},`);
   return `{\n${lines.join('\n')}\n} as const`;
 }
 
@@ -148,11 +246,23 @@ async function main(): Promise<void> {
   const raw = await readFile(specPath, 'utf8');
   const spec = JSON.parse(raw) as AskContractsSpecV1;
 
-  const hostToGuestNames = Object.keys(spec.hostToGuest ?? {}).sort();
-  const guestToHostNames = Object.keys(spec.guestToHost ?? {}).sort();
+  // 注释 key（分组标题）在源头过滤，全程使用净化后的事件表
+  const hostToGuest = filterCommentEntries(spec.hostToGuest ?? {});
+  const guestToHost = filterCommentEntries(spec.guestToHost ?? {});
 
-  const hostToGuestPayloads = renderPayloadMap(spec.hostToGuest ?? {}, renderPayloadType);
-  const guestToHostPayloads = renderPayloadMap(spec.guestToHost ?? {}, renderPayloadType);
+  const hostToGuestNames = Object.keys(hostToGuest).sort();
+  const guestToHostNames = Object.keys(guestToHost).sort();
+
+  const eventPairs = extractEventPairs(guestToHost, hostToGuest);
+
+  // 配对身份集合：请求方（guestToHost 声明 response）与响应方（被 response 指向）
+  const pairedRequestNames = new Set(Object.keys(eventPairs));
+  const pairedResponseNames = new Set(Object.values(eventPairs));
+
+  const hostToGuestPayloads = renderFullPayloadMap(hostToGuest, pairedResponseNames);
+  const guestToHostPayloads = renderFullPayloadMap(guestToHost, pairedRequestNames);
+  const hostToGuestBusiness = renderBusinessPayloadMap(hostToGuest, pairedResponseNames);
+  const guestToHostBusiness = renderBusinessPayloadMap(guestToHost, pairedRequestNames);
 
   const content = `/**
  * 由脚本自动生成，请勿手改。
@@ -176,6 +286,23 @@ export type GuestToHostEventPayloads = ${guestToHostPayloads};
 export type GuestToHostEventName = keyof GuestToHostEventPayloads;
 ${renderConstNames(guestToHostNames, 'GUEST_TO_HOST_EVENT_NAMES')}
 ${renderTypeGuard('GUEST_TO_HOST_EVENT_NAMES', 'GuestToHostEventName', 'isGuestToHostEventName')}
+
+/**
+ * 请求-响应配对表：guestToHost 事件上声明了 "response" 的子集。
+ * ask.call 据此查表响应事件，EventHandler/HandlerRegistry 据此推导 handler 类型，
+ * 配对只存在于契约一处，两端零重复声明。
+ */
+export const EVENT_PAIRS = ${renderEventPairs(eventPairs)};
+export type EventPairs = typeof EVENT_PAIRS;
+export type RequestEventName = keyof EventPairs;
+
+/**
+ * 业务载荷（不含 requestId）：requestId 是协议管道字段，由生成器对配对事件
+ * 统一注入到完整的 Event Payloads 类型与运行时 schema，业务代码不感知——
+ * guest 侧 ask.call 的入参、host 侧 handler 的返回值使用以下业务类型。
+ */
+export type GuestToHostBusinessPayloads = ${guestToHostBusiness};
+export type HostToGuestBusinessPayloads = ${hostToGuestBusiness};
 
 export type HostToGuestEvent<E extends HostToGuestEventName = HostToGuestEventName> = {
   name: E;
@@ -235,7 +362,7 @@ function validatePayloadAgainstSchema(payload: unknown, schema: PayloadSchema): 
   return true;
 }
 
-export const HOST_TO_GUEST_PAYLOAD_SCHEMA = ${renderPayloadSchemaMap(spec.hostToGuest ?? {})};
+export const HOST_TO_GUEST_PAYLOAD_SCHEMA = ${renderFullPayloadSchemaMap(hostToGuest, pairedResponseNames)};
 export function validateHostToGuestPayload<E extends HostToGuestEventName>(
   name: E,
   payload: unknown
@@ -245,7 +372,7 @@ export function validateHostToGuestPayload<E extends HostToGuestEventName>(
   return validatePayloadAgainstSchema(payload, schema);
 }
 
-export const GUEST_TO_HOST_PAYLOAD_SCHEMA = ${renderPayloadSchemaMap(spec.guestToHost ?? {})};
+export const GUEST_TO_HOST_PAYLOAD_SCHEMA = ${renderFullPayloadSchemaMap(guestToHost, pairedRequestNames)};
 export function validateGuestToHostPayload<E extends GuestToHostEventName>(
   name: E,
   payload: unknown

@@ -15,7 +15,7 @@
 
 **How it works:**
 - **UI Components**: Guest side is string `"StepList"`, Host side is complete RN implementation
-- **APIs**: Guest sends commands via `global.__sendEventToHost('ASKIT_TOAST_SHOW', {...})`, Host bridge routes to real native APIs like ToastAndroid
+- **APIs**: Guest calls host capabilities via `ask` (typed RPC over keel's `__keel_emitEvent`/`__keel_onHostEvent` bridge), with request-response pairs locked by the generated contracts (`EVENT_PAIRS`)
 
 ## Architecture
 
@@ -68,20 +68,23 @@ bun add github:GoAskAway/askit
 ### In Guest (QuickJS Sandbox)
 
 ```typescript
-import { EventEmitter, Toast, Haptic } from 'askit';
+import { ask, http } from 'askit';
 import { StepList, UserAvatar } from 'askit';
 
-// Event communication
-EventEmitter.emit('guest:ready', { version: '1.0.0' });
-EventEmitter.on('host:config', (config) => {
-  console.log('Received config:', config);
-});
+// RPC: call host capabilities (requestId auto-generated, response event
+// resolved from the contract's EVENT_PAIRS; timeout & success:false reject)
+const appInfo = await ask.call('GET_APP_INFO');
+await ask.call('SET_APP_LANGUAGE', { language: 'en' });
 
-// Toast notifications
-Toast.show('Hello from guest!', { duration: 'short', position: 'bottom' });
+// One-way notification to host
+ask.send('GUEST_SLEEP_STATE', { sleeping: true });
 
-// Haptic feedback
-Haptic.trigger('light');
+// Subscribe to host push events (returns unsubscribe fn)
+const off = ask.on('HOST_VISIBILITY', ({ visible }) => {});
+off();
+
+// HTTP via host proxy
+const res = await http.get<{ code: number }>('https://api.example.com');
 
 // UI Components (returns DSL for host rendering)
 export function App() {
@@ -94,6 +97,7 @@ export function App() {
 ```typescript
 // Import core module for bridging
 import { createEngineAdapter, components } from 'askit/core';
+import { EventHandler } from 'askit';
 import { Engine } from 'keel';
 
 // Create engine and connect askit
@@ -103,8 +107,20 @@ const adapter = createEngineAdapter(engine);
 // Register components for rendering guest UI
 engine.register(components);
 
+// Register RPC handlers — without this, ask.call from the guest
+// only times out. Handlers are plain functions; the response event
+// is resolved from the contract EVENT_PAIRS at dispatch time.
+const unsubscribe = EventHandler.setup(engine, {
+  tabId: 'tab-1',
+  handlers: {
+    GET_APP_INFO: async () => ({ appName: 'demo', logo: '', languageContents: null, favoriteCount: 0, usedCount: 0, author: 'askit' }),
+  },
+});
+
 // Start guest (supports URL or bundled code string)
 await engine.loadBundle('https://example.com/guest.js');
+
+// On teardown: unsubscribe()
 ```
 
 ## What is askit?

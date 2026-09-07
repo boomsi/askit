@@ -1,4 +1,10 @@
-import type { GuestToHostEventPayloads, HostToGuestEventPayloads } from 'askit/contracts';
+import type {
+  EventPairs,
+  GuestToHostBusinessPayloads,
+  GuestToHostEventPayloads,
+  HostToGuestBusinessPayloads,
+} from 'askit/contracts';
+import { EVENT_PAIRS } from 'askit/contracts';
 import { HostHttpHandler } from './Https.host';
 
 /**
@@ -23,34 +29,21 @@ export type MessageLogHandler = (
   tabId?: string
 ) => void;
 
-type HandlerFunc<
-  K extends keyof GuestToHostEventPayloads,
-  V extends keyof HostToGuestEventPayloads,
-> = (payload: GuestToHostEventPayloads[K], tabId?: string) => Promise<HostToGuestEventPayloads[V]>;
-
-type HandlerEntry<
-  K extends keyof GuestToHostEventPayloads,
-  V extends keyof HostToGuestEventPayloads,
-> = {
-  responseEvent: V;
-  handle: HandlerFunc<K, V>;
-};
-
-// 按 K 泛型化的 handler 条目：V 在 HostToGuestEventPayloads 全键上取联合，
-// payload 类型按 K 锁定到 GuestToHostEventPayloads[K]，让调用方在编写 handler 时拿到精确类型。
-type AnyHandlerEntry<K extends keyof GuestToHostEventPayloads> = {
-  [V in keyof HostToGuestEventPayloads]: HandlerEntry<K, V>;
-}[keyof HostToGuestEventPayloads];
-
+// 请求-响应配对由契约生成的 EventPairs 锁定：响应事件由 EventHandler 分发时查表，
+// 宿主只声明业务函数（入参/返回类型按事件对精确推导），配对只存在于契约一处。
 export type HandlerRegistry = Partial<{
-  [K in keyof GuestToHostEventPayloads]: AnyHandlerEntry<K>;
+  [K in keyof EventPairs]: (
+    payload: GuestToHostBusinessPayloads[K],
+    tabId?: string
+  ) => Promise<HostToGuestBusinessPayloads[EventPairs[K]]>;
 }>;
 
-function isRegisteredEvent(
-  event: string,
-  handlers: HandlerRegistry
-): event is keyof GuestToHostEventPayloads {
-  return event in handlers;
+function isRegisteredEvent(event: string, handlers: HandlerRegistry): event is keyof EventPairs {
+  // hasOwnProperty.call 而非 in：in 走原型链，'toString'/'constructor' 等继承属性会命中，
+  // Object.prototype 方法会被误当 handler 调用，且 EVENT_PAIRS 查不到对应响应事件。
+  // （lib=ES2020 无 Object.hasOwn，QuickJS 兼容性优先于新语法）
+  // biome-ignore lint/suspicious/noPrototypeBuiltins: 见上，ES2020 lib 下无 Object.hasOwn
+  return Object.prototype.hasOwnProperty.call(handlers, event);
 }
 
 /**
@@ -62,35 +55,25 @@ function isRegisteredEvent(
  */
 export class EventHandler {
   private static handlers: HandlerRegistry = {
-    HTTP_REQUEST: {
-      responseEvent: 'HTTP_RESPONSE',
-      handle: (payload) => HostHttpHandler.handleRequest(payload),
-    },
+    HTTP_REQUEST: (payload) => HostHttpHandler.handleRequest(payload),
     // 占位实现：宿主应通过 setup 的 customHandlers 覆盖，提供真实应用信息
-    GET_APP_INFO: {
-      responseEvent: 'SEND_APP_INFO',
-      handle: async (payload) => {
-        const { requestId } = payload;
-        return {
-          requestId,
-          appName: '',
-          logo: '',
-          languageContents: null,
-          favoriteCount: 0,
-          usedCount: 0,
-          author: '',
-        };
-      },
-    },
+    GET_APP_INFO: async () => ({
+      appName: '',
+      logo: '',
+      languageContents: null,
+      favoriteCount: 0,
+      usedCount: 0,
+      author: '',
+    }),
   };
 
   // 按 K 泛型化的分发：编译期锁定 payload 与 handler 的对应关系。
   // setup 入口拿到的是 string + unknown，通过 isRegisteredEvent 收窄 K 后调用本方法，
   // 在 K 已确定的作用域内，payload cast 到 GuestToHostEventPayloads[K] 是诚实的类型擦除。
-  private static async handleKnownEvent<K extends keyof GuestToHostEventPayloads>(
+  private static async handleKnownEvent<K extends keyof EventPairs>(
     engine: Engine,
     event: K,
-    payload: GuestToHostEventPayloads[K],
+    payload: GuestToHostEventPayloads[K], // 完整线上载荷（含 requestId），拆分后业务对象才传给 handler
     tabId: string,
     onLog: MessageLogHandler | undefined,
     customHandlers: HandlerRegistry | undefined
@@ -101,10 +84,17 @@ export class EventHandler {
       return;
     }
 
-    const responsePayload = await handler.handle(payload, tabId);
-    engine.sendEvent(handler.responseEvent, responsePayload);
+    // 响应事件由契约配对表查得，宿主 registry 不再声明（配对唯一存在于契约）。
+    // 边界拆分：requestId 是管道字段，从线上载荷提取后只把业务对象传给
+    // handler（业务侧展开/序列化不暴露它），响应时再统一注入回传。
+    // business 的 cast 是运行时已验证形状的单层擦除（requestId 已真实移除）
+    const responseEvent = EVENT_PAIRS[event];
+    const { requestId, ...business } = payload as { requestId: string } & Record<string, unknown>;
+    const businessPayload = await handler(business as GuestToHostBusinessPayloads[K], tabId);
+    const responsePayload = { ...businessPayload, requestId };
+    engine.sendEvent(responseEvent, responsePayload);
     if (onLog) {
-      onLog('hostToGuest', handler.responseEvent, responsePayload, tabId);
+      onLog('hostToGuest', responseEvent, responsePayload, tabId);
     }
   }
 
@@ -136,8 +126,9 @@ export class EventHandler {
       }
 
       try {
-        // isRegisteredEvent 把 event 收窄为 keyof GuestToHostEventPayloads；
-        // engine.on 的 payload 是 unknown，cast 到对应 K 的 payload 类型是运行时唯一的类型擦除点。
+        // isRegisteredEvent 把 event 收窄为 keyof EventPairs；
+        // engine.on 的 payload 是 unknown，cast 到对应 K 的完整载荷类型是
+        // 运行时唯一的类型擦除点（requestId 在 handleKnownEvent 内拆分）。
         await EventHandler.handleKnownEvent(
           engine,
           event,
