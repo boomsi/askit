@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { cmdInit } from './askc';
+import { cmdInit, validateManifest } from './askc';
 
 /** 每个用例一个独立临时目录，避免相互污染。 */
 function makeTempDir(): string {
@@ -83,6 +83,33 @@ describe('cmdInit', () => {
       expect(pkg.name).toBe('gasapp');
       // manifest 里的应用名保持调用方传入的大小写。
       expect(manifest.name).toBe('GasApp');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('默认应用名生成的 manifest 能通过 CLI 自身校验', async () => {
+    const dir = makeTempDir();
+    try {
+      // 不带 --name 走默认名：默认名必须合法，否则 init 出来的工程
+      // 会被 build 的命名校验直接拒绝（默认名曾用连字符踩过这个坑）。
+      await cmdInit([dir], new Map());
+
+      const manifest = JSON.parse(
+        readFileSync(join(dir, 'manifest.json'), 'utf8')
+      );
+      expect(() => validateManifest(manifest, null)).not.toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('非法 --name 在 init 阶段即报错', async () => {
+    const dir = makeTempDir();
+    try {
+      await expect(
+        cmdInit([dir], new Map([['name', 'my-app']]))
+      ).rejects.toThrow();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

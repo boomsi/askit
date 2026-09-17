@@ -213,7 +213,11 @@ export async function cmdInit(args: string[], flags: Map<string, string | boolea
   const dir = args[0];
   if (!dir) throw new Error('缺少 <dir>');
 
-  const name = getFlag(flags, 'name') ?? 'my-askc-app';
+  // 默认名必须满足 manifest 的命名规则（字母开头，仅字母 / 数字 / 下划线），
+  // 否则 init 会生成一个自己 build 必然拒绝的 manifest。
+  const name = getFlag(flags, 'name') ?? 'MyAskcApp';
+  // 早失败：名称不合规时在 init 阶段就报错，而不是等到 build 才发现。
+  validateName(name);
   await run(['mkdir', '-p', joinPath(dir, 'src')]);
   await run(['mkdir', '-p', joinPath(dir, 'dist')]);
 
