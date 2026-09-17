@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /* eslint-disable no-console */
 
 import { watch, type FSWatcher } from 'node:fs';
@@ -208,7 +209,7 @@ askc-cli（最小闭环）
 `);
 }
 
-async function cmdInit(args: string[], flags: Map<string, string | boolean>): Promise<void> {
+export async function cmdInit(args: string[], flags: Map<string, string | boolean>): Promise<void> {
   const dir = args[0];
   if (!dir) throw new Error('缺少 <dir>');
 
@@ -222,15 +223,51 @@ async function cmdInit(args: string[], flags: Map<string, string | boolean>): Pr
     description: 'Ask App (unified bundle)',
     contract: DEFAULT_CONTRACT,
     permissions: [],
+    // unified 单 bundle 模式：不声明 leftPanel / rightPanel 面板文件，
+    // 否则 build 会校验这些文件必须存在，而脚手架并不生成它们。
     layout: {
-      leftPanel: 'menu.js',
-      rightPanel: 'ext.js',
       rightPanelDefaultVisible: false,
       unified: 'unified-app.js',
     },
   };
 
   await Bun.write(joinPath(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+  // 工程自身的 npm 元信息与构建脚本：
+  // - build 只产出中间产物 app.js（预览、调试用）；
+  // - build:askc 复用 CLI 的 build 打成 .askc（askc build 内部调用的是 build，不会递归）。
+  const packageJson = {
+    // npm 包名不允许大写，manifest 的 name 保持原样。
+    name: name.toLowerCase(),
+    version: '0.1.0',
+    private: true,
+    scripts: {
+      build: 'bun node_modules/keel/src/cli/bin.ts build src/unified-app.tsx -o app.js --footer node_modules/askit/src/cli/askc-footer.js --no-minify --dev',
+      'build:askc': 'bun node_modules/askit/cli/askc.ts build --project .',
+    },
+    dependencies: {
+      askit: 'https://github.com/GoAskAway/askit.git#main',
+      // keel 是私有仓库：bun 的 https git 依赖走匿名 tarball API 必 404，
+      // git+ssh:// 在 bun 中有解析问题，实测只有 scp 简写能正常安装。
+      keel: 'git@github.com:Actrium/keel.git#main',
+      react: '^19.0.0',
+    },
+    devDependencies: {
+      // keel bundler 运行时按需 import 这些包，但 keel 自身未声明，
+      // 需要工程自备（与 AskcPreview 根项目的做法一致）。
+      '@babel/core': '^7.28.5',
+      '@babel/plugin-transform-arrow-functions': '^7.29.7',
+      '@babel/plugin-transform-block-scoping': '^7.29.7',
+      '@types/react': '^19.0.0',
+      'oxc-parser': '^0.26.0',
+      typescript: '^5.7.2',
+    },
+  };
+
+  await Bun.write(
+    joinPath(dir, 'package.json'),
+    JSON.stringify(packageJson, null, 2) + '\n'
+  );
 
   await Bun.write(
     joinPath(dir, 'src', 'unified-app.tsx'),
@@ -260,13 +297,18 @@ async function cmdInit(args: string[], flags: Map<string, string | boolean>): Pr
   await Bun.write(
     joinPath(dir, 'README.md'),
     `# ${name}\n\n` +
-      `## 开发\n\n` +
-      `- 生成 bundle：\`askc build --project .\`\n` +
-      `- 校验包：\`askc verify ./${name}.askc\`\n`
+      `## 开始\n\n` +
+      '```bash\n' +
+      `bun install\n` +
+      '```\n\n' +
+      `## 构建\n\n` +
+      `- 中间产物 bundle（app.js，预览 / 调试用）：\`bun run build\`\n` +
+      `- 可交付包（${name}.askc）：\`bun run build:askc\`\n` +
+      `- 校验包：\`bun node_modules/askit/cli/askc.ts verify ./${name}.askc\`\n`
   );
 
   console.log(`✅ 已初始化：${dir}`);
-  console.log(`- 下一步：cd ${dir} && askc build --project .`);
+  console.log(`- 下一步：cd ${dir} && bun install && bun run build:askc`);
 }
 
 function buildAutoRenderFooter(): string {
@@ -718,6 +760,9 @@ async function cmdDev(args: string[], flags: Map<string, string | boolean>): Pro
   await new Promise<void>(() => {});
 }
 
+// CLI 支持的命令名；首个参数不在此列时按 create-* 约定的目标目录处理。
+const KNOWN_COMMANDS = ['init', 'build', 'verify', 'dev'];
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
@@ -728,6 +773,13 @@ async function main(): Promise<void> {
   }
 
   const { positional, flags } = parseFlags(argv.slice(1));
+
+  // create-* 包约定：`create-askc-app my-app` 的首个参数是目标目录而不是命令，
+  // 因此未知的非选项参数一律按 init 处理。
+  if (!cmd.startsWith('-') && !KNOWN_COMMANDS.includes(cmd)) {
+    await cmdInit([cmd, ...positional], flags);
+    return;
+  }
 
   switch (cmd) {
     case 'init':

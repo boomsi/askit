@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'bun:test';
+
 import { joinPath, sha256Utf8, validateManifest } from './askc';
 
 describe('sha256Utf8', () => {

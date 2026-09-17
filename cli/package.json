@@ -1,0 +1,22 @@
+{
+  "name": "create-askc-app",
+  "version": "0.1.0",
+  "description": "初始化 askc 应用工程（manifest.json + unified-app 入口 + 目录骨架）",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "create-askc-app": "./askc.ts"
+  },
+  "files": [
+    "askc.ts",
+    "manifest.validate.ts"
+  ],
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GoAskAway/askit.git",
+    "directory": "cli"
+  }
+}
