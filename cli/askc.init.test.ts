@@ -29,11 +29,25 @@ describe('cmdInit', () => {
       const manifest = JSON.parse(
         readFileSync(join(dir, 'manifest.json'), 'utf8')
       );
-      // unified 单 bundle 模式：不声明面板文件，
-      // 否则 build 校验会因 menu.js / ext.js 不存在而失败。
-      expect(manifest.layout.unified).toBe('unified-app.js');
-      expect(manifest.layout.leftPanel).toBeUndefined();
-      expect(manifest.layout.rightPanel).toBeUndefined();
+      // 入口使用宿主（Loom AskcLoader）契约的顶层 entry 字段，
+      // 不再使用旧版 layout.unified（宿主不读 layout，会直接拒载）。
+      expect(manifest.entry).toBe('unified-app.js');
+      expect(manifest.layout).toBeUndefined();
+      // 面板初始可见性同样在顶层（宿主类型与 counterapp 的位置）。
+      expect(manifest.rightPanelDefaultVisible).toBe(false);
+
+      // 面板模式契约：入口必须导出 usePanels（打包 footer 据此以 __panelId
+      // 标记面板交给宿主提取）；default 导出会让 keel 打包时 __keel.guest
+      // 只剩 module.exports.default，named export 丢失导致宿主提取不到面板。
+      const entryTsx = readFileSync(join(dir, 'src', 'unified-app.tsx'), 'utf8');
+      expect(entryTsx).toContain('export function usePanels');
+      expect(entryTsx).not.toContain('export default');
+
+      // 组件必须从 keel/guest 引入：沙箱只注入 React/KeelGuest 等全局，
+      // 'react-native' 会被打包替换为不存在的 ReactNative 全局，
+      // bundle 执行时直接 ReferenceError。
+      expect(entryTsx).toContain("from 'keel/guest'");
+      expect(entryTsx).not.toContain("from 'react-native'");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

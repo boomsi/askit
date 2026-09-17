@@ -13,7 +13,7 @@ bun create @boomsi/askc-app my-app
 
 生成内容：
 
-- `manifest.json` —— 应用元信息与面板布局声明
+- `manifest.json` —— 应用元信息与入口声明（`entry`，宿主加载用的字段）
 - `package.json` —— 构建脚本与依赖（keel bundler 出 `app.js`，askc 打包出 `.askc`）
 - `src/unified-app.tsx` —— 统一入口组件
 - `README.md`
