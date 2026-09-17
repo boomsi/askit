@@ -1,11 +1,15 @@
 {
-  "name": "create-askc-app",
-  "version": "0.1.0",
+  "name": "@boomsi/create-askc-app",
+  "version": "0.1.1",
   "description": "初始化 askc 应用工程（manifest.json + unified-app 入口 + 目录骨架）",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
     "create-askc-app": "./askc.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "files": [
     "askc.ts",

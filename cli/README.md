@@ -5,10 +5,10 @@
 ## 用法
 
 ```bash
-bunx create-askc-app my-app
+bunx @boomsi/create-askc-app my-app
 
-# bun 的脚手架约定（bun create 会解析 create-* 包）
-bun create askc-app my-app
+# bun 的脚手架约定（@scope/create-foo 对应 @scope/foo）
+bun create @boomsi/askc-app my-app
 ```
 
 生成内容：
